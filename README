@@ -14,59 +14,35 @@ The bugs discovered in gap2 code include:
 
 1) Bug in calculating the umklap vector:
 
-   When applying symmetry operation on an irreducible k-vector to generate reducible k-vector, one encounters an umklap vector, which is one of the reciprocal vectors.
+When applying symmetry operation on an irreducible k-vector to generate reducible k-vector, one encounters an umklap vector, which is one of the reciprocal vectors.
   
-   In gap2 code it was assumed that such vector can only have zeros or ones as components, but unfortunately, it can have larger components in general.
-   More precisely, the array "indgk", which translates the set of reciprocal vectors for generic k-point to equivalent set of irreducible k-point, was wrong. 
-   Namely, the umklap g0(:,ik), which is set in "bz_setiksym.f90" is not properly computed, namely  "(1-isign(1,ki))/2", instead of generic 
+In gap2 code it was assumed that such vector can only have zeros or ones as components, but unfortunately, it can have larger components in general. More precisely, the array "indgk", which translates the set of reciprocal vectors for generic k-point to equivalent set of irreducible k-point, was wrong. Namely, the umklap g0(:,ik), which is set in "bz_setiksym.f90" is not properly computed, namely
+   "(1-isign(1,ki))/2",
+instead of generic 
    [if ki==0 return 0, if ki>0: return -int(floor(ki)), if ki<0: return int(ceil(-ki))]
 
-   Some background: To compute matrix elements at generic k-point, we need to use vector file from irreducible k-points.
-   Namely, the symmetry operation Gamma has to be applied to (k+G), where k is vector in the first Brillouine zone, and G is reciprocal vector. 
-   When k is reducible, (k+G) needs to be matched with (k_irr+G'), such that k_irr ~ Gamma k, where k_irr is the corresponding irreducible point, 
-   and G' is a different set of reciprocal vectors, and Gamma is the symmetry operation.
-
-   The bug was in calculating umkplap contribution, namely, Gamma k = k_irr + G_umklap, where G_umkplap is some reciprocal vector. 
-   It was assumed that G_umklap can have either zeros or ones. The algorithm checks if certain component is positive or negative, and then it was set to zero or one. 
-   It can happen that G_umklap is larger, and can have 2's and even 3's in some components. 
+Some background: To compute matrix elements at generic k-point, we need to use vector file from irreducible k-points. Namely, the symmetry operation Gamma has to be applied to (k+G), where k is vector in the first Brillouine zone, and G is reciprocal vector. When k is reducible, (k+G) needs to be matched with (k_irr+G'), such that k_irr ~ Gamma k, where k_irr is the corresponding irreducible point, and G' is a different set of reciprocal vectors, and Gamma is the symmetry operation. The bug was in calculating umkplap contribution, namely, Gamma k = k_irr + G_umklap, where G_umkplap is some reciprocal vector. It was assumed that G_umklap can have either zeros or ones. The algorithm checks if certain component is positive or negative, and then it was set to zero or one. It can happen that G_umklap is larger, and can have 2's and even 3's in some components. 
    
-2) The treatment of LAPW+LO has a bug in Gap2 code. When using APW+LO, the method works fine, but when LAPW is used instead of APW, the linearization energies are not 
-   properly read from energy file, and therefore some local orbitals are ignored when LAPW is used. This bug appeared in "set_lapwlo.f90".
+2) The treatment of LAPW+LO has a bug in Gap2 code. When using APW+LO, the method works fine, but when LAPW is used instead of APW, the linearization energies are not properly read from energy file, and therefore some local orbitals are ignored when LAPW is used. This bug appeared in "set_lapwlo.f90".
 
-3) The matrix elements for \nabla (momentum) operator are not computed properly. This is needed for small q->0 limit, where we use k-p perturbation theory.
-   In subroutine "calcmmatvv.f90", the variable "xmy2" should be updated, and itc contribution should be added to iself, i.e., "xmy2 = xmy2 + ...", and instead there was a typo "xmy2 = xmy1 + ..."
-   This made the q->0 limit inacurate.
+3) The matrix elements for \nabla (momentum) operator are not computed properly. This is needed for small q->0 limit, where we use k-p perturbation theory. In subroutine "calcmmatvv.f90", the variable "xmy2" should be updated, and itc contribution should be added to iself, i.e., "xmy2 = xmy2 + ...", and instead there was a typo "xmy2 = xmy1 + ...". This made the q->0 limit inacurate in Gap2 code.
 
-4) When calculating the wings for q->0 limit, one constructs a matrix epsw1(:,omega) and epsw2(:,omega). When multiplying these wings with matrix elements, which transform from product basis to band basis (minm), these matrices were not properly accesses, and as a result only the first frequency of the wings  was used, instead of proper frequency dependence of wings.
-   Namely, "epsw2(:,1)" was used instead of "epsw2(:,iom)". The bug appeared in "calcmwm.f90".
+4) When calculating the wings for q->0 limit, one constructs a matrix epsw1(:,omega) and epsw2(:,omega). When multiplying these wings with matrix elements, which transform from product basis to band basis (minm), these matrices were not properly accesses, and as a result only the first frequency of the wings  was used, instead of proper frequency dependence of wings. Namely, "epsw2(:,1)" was used instead of "epsw2(:,iom)". The bug appeared in "calcmwm.f90".
 
-5) Minor correction: In the interpolation of bands using Pickett's algorithm (PRB 38, 2721 (1988)), it is essential that the number of real space vectors of star members "m" is larger than the number of k-points calculated.
-   If the number of k-points in calculation is large, for example 1000-k-points calculation, the interpolation in Gap2 code would not work, because the number of star vectors precalculated for interpolation is too small.
-   The fact that such algorithm fails is understandable, because we are trayng to find a set of coefficients eps_m such that the bands go exactly through the calculated k-points, and at the same time are smooth.
-   If the number of "m" is smaller than the number of k-points, this is not possible at all, and the algorithm results in singular inverse. 
+5) Minor correction: In the interpolation of bands using Pickett's algorithm (PRB 38, 2721 (1988)), it is essential that the number of real space vectors of star members "m" is larger than the number of k-points calculated. If the number of k-points in calculation is large, for example 1000-k-points calculation, the interpolation in Gap2 code would not work, because the number of star vectors precalculated for interpolation is too small. The fact that such algorithm fails is understandable, because we are trayng to find a set of coefficients eps_m such that the bands go exactly through the calculated k-points, and at the same time are smooth. If the number of "m" is smaller than the number of k-points, this is not possible at all, and the algorithm results in singular inverse. 
 
 In addition to these bug fixes, we implemented several improvements:
 
-6) Better tetrahedron integration for polarization. It turn out to be essential to compute all Matsubara frequency points using exactly the same tetrahedron setup, and grouping together terms which are near-singular, following ideas from PRB 73, 035120, 2006 and PRB 29, 3430 (1984). 
-   Such algroithm, where loop over Matsubara points is the innermost loop, is faster, hence we can afford more Matsubara points. 
-   More importantly, the self-energy computed in this way has more uniform frequency dependence, therefore the analytic continuation of the Matsubara self-energy by the standard Pade approximation is now stable, and we can use many more Matsubara ponts (by default we use all computed Matsubara points), rather than just a couple in Gap2 code (two pole approximation was used in Gap2 code).
+6) Better tetrahedron integration for polarization. It turn out to be essential to compute all Matsubara frequency points using exactly the same tetrahedron setup, and grouping together terms which are near-singular, following ideas from PRB 73, 035120, 2006 and PRB 29, 3430 (1984). Such algroithm, where loop over Matsubara points is the innermost loop, is faster, hence we can afford more Matsubara points. More importantly, the self-energy computed in this way has more uniform frequency dependence, therefore the analytic continuation of the Matsubara self-energy by the standard Pade approximation is now stable, and we can use many more Matsubara ponts (by default we use all computed Matsubara points), rather than just a couple in Gap2 code (two pole approximation was used in Gap2 code).
 
-7) We implemented much more precise convolution of the single-particle Green's function and W. The idea is to spline W, (actually the object is (W-V)/V), and then interpolate W on 20-times more precise mesh when convoluting with the single-particle Green's function.
-   For the interpolation, it is important to properly capture the zero frequency and high frequency limit. We know that W falls of as c/omega^2 + d/omega^4 +.. and goes to a constant at omega=0, hence we first multiply W with the function W*(1+omega^2), which approaches a constant at infinity and at zero.
-   Note that the first derivative of this object at infinity vanishes. We than spline the resulting object with the boundary condition of the first derivative vanishing at infinity, and the second derivative vanishing at zero frequency.
-   With this interpolated object we then perform convolution between G and W on a very precise mesh of several hundreds Matsubara points.
+7) We implemented much more precise convolution of the single-particle Green's function and W. The idea is to spline W, (actually the object is (W-V)/V), and then interpolate W on 20-times more precise mesh when convoluting with the single-particle Green's function. For the interpolation, it is important to properly capture the zero frequency and high frequency limit. We know that W falls of as c/omega^2 + d/omega^4 +.. and goes to a constant at omega=0, hence we first multiply W with the function W*(1+omega^2), which approaches a constant at infinity and at zero. Note that the first derivative of this object at infinity vanishes. We than spline the resulting object with the boundary condition of the first derivative vanishing at infinity, and the second derivative vanishing at zero frequency. With this interpolated object we then perform convolution between G and W on a very precise mesh of several hundreds Matsubara points.
 
-8) We added tan-mesh for Matsubara frequencies, which is prefered, and we recommend to use more Matsubara points in calculation (see below) and use many more for performing convolution.
-   The convolution in Gap2 code was quite imprecise for metals.
+8) We added tan-mesh for Matsubara frequencies, which is prefered, and we recommend to use more Matsubara points in calculation (see below) and use many more for performing convolution. The convolution in Gap2 code was quite imprecise for metals.
 
-9) We implemented a method which is based on SVD-functions, constructed by SVD decomposition of the analytic continuation Kernel.
-   Such decomposition of Matsubara frequency dependence in terms of basis functions and small number of coefficients turns out to be very useful in DMFT applications.
-   It can be used here as well, but we found that the cutoff for neglecting high-order (and strongly oscilating) basis functions must be very small (below 1e-10) for Pade approximation to work, hence the gain in speed is substantial only when we use very many Matsubara points.
-   Since W is quite smooth object on imaginary axis, the interpolation seems to work quite well.
+9) We implemented a method which is based on SVD-functions, constructed by SVD decomposition of the analytic continuation Kernel. Such decomposition of Matsubara frequency dependence in terms of basis functions and small number of coefficients turns out to be very useful in DMFT applications. It can be used here as well, but we found that the cutoff for neglecting high-order (and strongly oscilating) basis functions must be very small (below 1e-10) for Pade approximation to work, hence the gain in speed is substantial only when we use very many Matsubara points. Since W is quite smooth object on imaginary axis, the interpolation seems to work quite well.
    
 10) We recommend the analytic continuation method by Pade for metals, while in insulators Pade and fitting two poles should be quite similar.
  
-
 ----------------------------------------------------
 HOW TO USE THE CODE
 
