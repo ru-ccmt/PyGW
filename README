@@ -4,17 +4,17 @@ PyGW is an electronic structure code using G0W0 and GW0 calculations for realist
 It is build on top of Wien2k DFT code and is implemented in Python. For speed, some parts are coded in fortran and converted to python modules using f2py.
 But most of these algorithms are also coded in Python, so that they are easier to read and understand. We use an "if FORT" statement, which can invoke the Python or the fortran version.
 
-Earlier version of PyGW code closely followed Gap2 code, and was carefully checked with Gap2 code for bugs.
+Earlier version of PyGW code closely followed Gap2 code, and was carefully checked with Gap2 code for accuracy.
 Here is the link to Gap2 code:
 http://www.chem.pku.edu.cn/jianghgroup/codes/gap2.html
 
-But note that currently the two codes do not given identical output on identical input, as there are several bugs present in Gap2 code, which were
-resolved in PyGW code, and we expect this code to be also more stable and slightly faster.
+But note that currently the two codes do not given identical output on identical input, as there are several bugs present in Gap2 code, which were resolved in PyGW code, and we expect this code to be also more stable and slightly faster.
 
 The bugs discovered in gap2 code include:
 
 1) Bug in calculating the umklap vector:
-   When applying symmetry operation on a irreducible k-vector to generate reducible k-vector, one encounters an umklap vector, which is  one of the reciprocal vectors.
+
+   When applying symmetry operation on an irreducible k-vector to generate reducible k-vector, one encounters an umklap vector, which is one of the reciprocal vectors.
   
    In gap2 code it was assumed that such vector can only have zeros or ones as components, but unfortunately, it can have larger components in general.
    More precisely, the array "indgk", which translates the set of reciprocal vectors for generic k-point to equivalent set of irreducible k-point, was wrong. 
@@ -30,41 +30,41 @@ The bugs discovered in gap2 code include:
    It was assumed that G_umklap can have either zeros or ones. The algorithm checks if certain component is positive or negative, and then it was set to zero or one. 
    It can happen that G_umklap is larger, and can have 2's and even 3's in some components. 
    
-2) The treatment of LAPW+LO has a bug. When using APW+LO, the method works fine, but when LAPW is used instead of APW, the linearization energies were not 
-   properly read from energy file, and therefore local orbitals were ignored when LAPW was used. This bug appeared in "set_lapwlo.f90".
+2) The treatment of LAPW+LO has a bug in Gap2 code. When using APW+LO, the method works fine, but when LAPW is used instead of APW, the linearization energies are not 
+   properly read from energy file, and therefore some local orbitals are ignored when LAPW is used. This bug appeared in "set_lapwlo.f90".
 
 3) The matrix elements for \nabla (momentum) operator are not computed properly. This is needed for small q->0 limit, where we use k-p perturbation theory.
-   In subroutine "calcmmatvv.f90", xmy2 contribution should be added to iself, i.e., "xmy2 = xmy2 + ...", and instead there was a typo "xmy2 = xmy1 + ..."
+   In subroutine "calcmmatvv.f90", the variable "xmy2" should be updated, and itc contribution should be added to iself, i.e., "xmy2 = xmy2 + ...", and instead there was a typo "xmy2 = xmy1 + ..."
    This made the q->0 limit inacurate.
 
-4) When calculating the wings for q->0 limit, one constructs a matrix epsw1(:,omega) and epsw2(:,omega). When multiplying these wings with matrix elements, 
-   which transform from product basis to band basis (minm), these matrices were not properly accesses, and as a result only first frequency of the wings 
-   was used, instead of proper frequency dependence of wings. Namely, epsw2(:,1) was used instead of epsw2(:,iom).
+4) When calculating the wings for q->0 limit, one constructs a matrix epsw1(:,omega) and epsw2(:,omega). When multiplying these wings with matrix elements, which transform from product basis to band basis (minm), these matrices were not properly accesses, and as a result only the first frequency of the wings  was used, instead of proper frequency dependence of wings.
+   Namely, "epsw2(:,1)" was used instead of "epsw2(:,iom)". The bug appeared in "calcmwm.f90".
 
-5) Minor correction: In the interpolation of bands using Pickett's algorithm (PRB 38, 2721 (1988)), it is essential that the number of real space vectors 
-   of star members "m" is larger than the number of k-points calculated. If the number of k-points in calculation is large, for example 1000-k-points calculation, 
-   the interpolation in gap2 code would not work, because the number of star vectors precalculated for interpolation is too small.
-   The fact that such algorithm fails is understandable, because we are trayng to find a set of coefficients eps_m such that the bands go exactly through 
-   the calculated k-points, and at the same time are smooth. If the number of "m" is smaller than the number of k-points, this is not possible at all, 
-   and the algorithm results in singular inverse. 
+5) Minor correction: In the interpolation of bands using Pickett's algorithm (PRB 38, 2721 (1988)), it is essential that the number of real space vectors of star members "m" is larger than the number of k-points calculated.
+   If the number of k-points in calculation is large, for example 1000-k-points calculation, the interpolation in Gap2 code would not work, because the number of star vectors precalculated for interpolation is too small.
+   The fact that such algorithm fails is understandable, because we are trayng to find a set of coefficients eps_m such that the bands go exactly through the calculated k-points, and at the same time are smooth.
+   If the number of "m" is smaller than the number of k-points, this is not possible at all, and the algorithm results in singular inverse. 
 
 In addition to these bug fixes, we implemented several improvements:
-6) Better tetrahedron integration for polarization. It turn out to be essential to compute all Matsubara frequency points using exactly the same 
-   tetrahedron setup, and grouping together terms which are near-singular, following ideas from PRB 73, 035120, 2006 and PRB 29, 3430 (1984). 
+
+6) Better tetrahedron integration for polarization. It turn out to be essential to compute all Matsubara frequency points using exactly the same tetrahedron setup, and grouping together terms which are near-singular, following ideas from PRB 73, 035120, 2006 and PRB 29, 3430 (1984). 
    Such algroithm, where loop over Matsubara points is the innermost loop, is faster, hence we can afford more Matsubara points. 
-   More importantly, the Matsubara points have more uniform frequency dependence, therefore the analytic continuation of the Matsubara self-energy 
-   by Pade approximation is now much more stable, and we can use many more Matsubara ponts (by default we use all computed Matsubara points) 
-   rather than just a couple before (two pole approximation was used in Gap2 code).
+   More importantly, the self-energy computed in this way has more uniform frequency dependence, therefore the analytic continuation of the Matsubara self-energy by the standard Pade approximation is now stable, and we can use many more Matsubara ponts (by default we use all computed Matsubara points), rather than just a couple in Gap2 code (two pole approximation was used in Gap2 code).
 
-7) We added tan-mesh for Matsubara frequencies, which is prefered, and we recommend to use more Matsubara points in calculation (see below) and use many more
-   for performing convolution. The convolution in Gap2 code was quite imprecise for metals.
+7) We implemented much more precise convolution of the single-particle Green's function and W. The idea is to spline W, (actually the object is (W-V)/V), and then interpolate W on 20-times more precise mesh when convoluting with the single-particle Green's function.
+   For the interpolation, it is important to properly capture the zero frequency and high frequency limit. We know that W falls of as c/omega^2 + d/omega^4 +.. and goes to a constant at omega=0, hence we first multiply W with the function W*(1+omega^2), which approaches a constant at infinity and at zero.
+   Note that the first derivative of this object at infinity vanishes. We than spline the resulting object with the boundary condition of the first derivative vanishing at infinity, and the second derivative vanishing at zero frequency.
+   With this interpolated object we then perform convolution between G and W on a very precise mesh of several hundreds Matsubara points.
 
-8) We implemented a method which is based on SVD-functions, used in the the analytic continuation Kernel. Such decomposition of Matsubara frequency dependence
-   in terms of basis functions turns out to be very useful in DMFT applications. It can be used here as well, but we found that the cutoff for neglecting 
-   high-oscilating basis functions must be very small (below 1e-10) for Pade approximation to work, hence we gain the speed only in the limit of very large
-   number of Matsubara points used. 
+8) We added tan-mesh for Matsubara frequencies, which is prefered, and we recommend to use more Matsubara points in calculation (see below) and use many more for performing convolution.
+   The convolution in Gap2 code was quite imprecise for metals.
 
-9) We recommend the analytic continuation method by Pade for metals, while in insulators Pade and fitting two poles should be quite similar.
+9) We implemented a method which is based on SVD-functions, constructed by SVD decomposition of the analytic continuation Kernel.
+   Such decomposition of Matsubara frequency dependence in terms of basis functions and small number of coefficients turns out to be very useful in DMFT applications.
+   It can be used here as well, but we found that the cutoff for neglecting high-order (and strongly oscilating) basis functions must be very small (below 1e-10) for Pade approximation to work, hence the gain in speed is substantial only when we use very many Matsubara points.
+   Since W is quite smooth object on imaginary axis, the interpolation seems to work quite well.
+   
+10) We recommend the analytic continuation method by Pade for metals, while in insulators Pade and fitting two poles should be quite similar.
  
 
 ----------------------------------------------------
@@ -78,7 +78,7 @@ HOW TO USE THE CODE
 -modify wien2k to support 10 local orbitals. Learn how to here:
   https://www.sdyctxcy.com/jianghgroup/codes/gap2.html
 
--install gap2 code, which will be used for initialization.
+-install gap2 code, which will be used for initialization. This will be removed soon, but for now we still use input files of Gap2 code.
 
 -inside DFT directory with converged DFT calculation issue a command:
 
@@ -90,13 +90,12 @@ If you desire to add extra local orbitals, you can issue a command:
 gap2c_init -f <case> -d <newGWdirectory> -nkp 64 -newin1 -1  -lom10
 
 and you have to manually edit in1 file.
-Note that setting linearization energies is a bit tricky job, but pygw.py now prints in "data" directory 
-file named "RadialFunctions.x.y", where x starts for the atom, and y for l-quantum number. The columns
-in the file correspond to APW ul, APW dotul, followed by local orbitals, as specified in in1 file. 
+
+Note that setting linearization energies is a bit tricky job, but pygw.py now prints in "data" directory files named "RadialFunctions.x.y", where x starts for the atom, and y for l-quantum number.
+The columns in the file correspond to APW ul, APW dotul, followed by local orbitals, as specified in in1 file. 
 If linearization energies were properly placed, these functions should have proper shape, corresponding to 3s,3p,4s,4p,etc orbitals.
 
-2) After gap2c_init initialization, we will slightly edit "gw.inp" file. While the original file would work and produce similar results as 
-gap2 code, we believe a better quality results are possible.
+2) After gap2c_init initialization, we will slightly edit "gw.inp" file. While the original file would work and produce similar results as gap2 code, we believe a better quality results are possible.
 
 For metals, we recommend to improve the frequency grid to
 %FreqGrid                         # Frequency grid parameters
@@ -110,13 +109,15 @@ and for insulators, the lower cutoff can be large, and the convolution enhanced 
 %                                 # iopfreq= 1 (equally spaced), 2 (Gauss-Laguerre) or 3 (double Gauss-Legendre) 
 
 This will use tan-mesh of 32 Matsubara points, with maximum value set at 50Hartree, and minimum at 0.005 (or 0.02) Hartree. 
+
 One could use more points, but in current tests 32 were quite sufficient. 
+
 Finally, the factor 20 (or 5) is how much larger will be the mesh for performing convolution, needed for computing self-energy from W. 
-Namely, W is computed on 32 Matsubara points, however, when performing convolution we spline W on 
-20-times more points (640 points) to compute correlation self-energy.
-In metals, this factor should be large, maybe 10 or 20, because points near the Fermi energy need so much more precise mesh
-at convolution. For insulators, factor of 5 is maybe sufficient. More tests should be done to determine that though. Note that 
-in gap2 code this factor would always be 1, i.e., the same mesh is used for W and convolution.
+
+Namely, W is computed on 32 Matsubara points, however, when performing convolution we spline W on 20-times more points (640 points) to compute correlation self-energy.
+In metals, this factor should be large, maybe 10 or 20, because points near the Fermi energy need so much more precise mesh for convolution.
+For insulators, factor of 5 is maybe sufficient. More tests should be done to determine that though.
+Note that in gap2 code this factor would always be 1, i.e., the same mesh is used for W and convolution.
 
 
 The alternative is to use svd-basis for frequency summation. In this case we can use more frequency points, maybe 100 instead of 32. And we use iopfreq=5, i.e.,
@@ -127,7 +128,7 @@ In order to use pade approximation, we need a very small cutoff for singular val
 My experience is that above spline interpolation with iopfreq=4 is somewhat more robust and precise that svd basis choice.
 
 
-Second, we recommend one to reduce emingw and emaxgw, which stand for energy cutoff for self-energy calculation for external legs.
+Second, we recommend one to reduce "emingw" and "emaxgw" in "gw.inp", which stand for energy cutoff for self-energy calculation for external legs.
 Only bands near the Fermi energy should be corrected by self-energy, as analytic continuation at very high excited states is inacurate anyway.
 For several alkali metals, we could use
 
@@ -136,8 +137,8 @@ emaxgw =  1.0                # for which GW correction are going to be calculate
 
 Finally, we recommend to change the analytic continuation. This last step could be done at postprocessing, and does not necessary need to be performed here.
 The recommened (and most precise) method for analytic continuation seems to be old-fashioned Pade, which is iopac==0. 
-We could use iopac=1, which would use method related to method with only 2*npol=4 poles. Unfortunately this method is quite imprecise, although very stable.
-we could use iopac=2, which uses quasiparticle approximation, and estimation of Z at zero frequency. Unfortunately, this method also seem to be quite imprecise.
+We could use iopac=1, which would use method related to Pade method, but with only 2*npol=4 poles approximation. Unfortunately this method is quite imprecise in metals, although very stable.
+We could also use iopac=2, which uses quasiparticle approximation, and estimates Z at zero frequency. Unfortunately, this method also seem to be quite imprecise for metals.
 So we recommend iopac=0, i.e., standard Pade approximation.
 
 %SelfEnergy             # option for correlation self-energy 
@@ -145,31 +146,47 @@ So we recommend iopac=0, i.e., standard Pade approximation.
 %                       # Number of poles ( previous maxexp + 1, valid range: 2.. nomeg/2 ) 
 
 
-One parameter in mixed basis has not been very carefuly tested, namely, Q_mb, which is set to 0.75. Preliminary tests show that such small rkmax for 
-interstitial basis is quite accurate, but maybe one should convince onself of that for every example.
+Three other parameter might need some adjustment, although they are have pretty good default values.
+To converge the gap of semiconductors, you might to study their effect on the gap size. The parameters that control the size of the product basis are : "lmbmax", "Q_mb", and "MB_emax".
+Here lmbmax is set to 3 by default, and controls maximum L of the radial functions when constructing the product basis. If lmbmax=3, the product basis will have maximum L=6 (twice the maximum of the radial functions).
+In most cases this is already very precise, but to get the second digits of the gap in Si, one needs to increase this number to lmbmax=5.
+
+Q_mn is set to 0.75, and is the upper cutoff for the plane wave basis in the interstitials (for the product basis). Here Q_mb=0.75 means that the cutoff will be 0.75*RKmax from case.in1 file, which is 7 by default in Wien2k.
+We found that such cutoff seems to be quite accurate in all cases tested so far.
+
+
+MB_emax is the energy cutoff for the radial functions included in the product basis, and is set to 20 Hartree by default. We check the energy of the linearization energy, and if its energy is between MB_emin and MB_emax, we included it in the product basis.
+
+
+3    |    1.E-4  |  0   # lmbmax  | wftol  | lblmax
 
 %MixBasis               # Mixed basis parameters
 0.75                    # Q_mb
 ...
 
 
+3) Next submit parallel pygw.py job by envoking
 
-3) Next submit parallel pygw.py job by envoking 
 mpirun -n xx pygw.py
+
 where xx should be comensurate with the number of q-points. For 4x4x4 grid, 64 cores is the best option, and more would not speed up the calculation.
 
 4) once the job is done, you can postprocess and plot bands. First produce case.energy_band file, which is the energy file of a regular 
 dft calculation when plotting bands, i.e., using case.klist_band
 
-Next execute 
-postprocess.py <case.energy_band>  <EF>
+Next execute
 
-where <EF> should be found from self-consistent DFT calculation in case.scf file.
+> postprocess.py <case.energy_band>  <EF>
 
-Note that for metals we execute only G0W0 method, and the resulting band are stored in 
-data/G0W0_bands.dat
+where <EF> should be found from self-consistent DFT calculation in case.scf file. Note that <EF> and <case.energy_band> should be compatible.
+
+Note that for metals we execute only G0W0 method, and the resulting band are stored in "data/G0W0_bands.dat".
 
 For insulators we also execute GW0 method, and the result appears in data/GW0_bands.dat
 However, this postprocessing step can be quite slow and tedious for insulators, hence the parallel execution of this step is also possible.
 
+
+5) To list all timings of all the steps, please use
+
+ > grep '##' pygw.out
 
