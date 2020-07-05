@@ -75,14 +75,14 @@ If linearization energies were properly placed, these functions should have prop
 
 For metals, we recommend to improve the frequency grid to
 %FreqGrid                         # Frequency grid parameters
- 4  | 32  | 50  |  0.005  |  20     # iopfreq | nomeg | omegmax | omegmin | precise grid
-%                                 # iopfreq= 1 (equally spaced), 2 (Gauss-Laguerre) or 3 (double Gauss-Legendre) 
+ 4  | 32  | 50  |  0.005  |  20   # iopfreq | nomeg | omegmax | omegmin | precise grid
+%                                 # iopfreq= 4 (tan-mesh)
 
 and for insulators, the lower cutoff can be large, and the convolution enhanced can be smaller, hence mesh for insulators can be
 
 %FreqGrid                         # Frequency grid parameters
  4  | 32  | 50  |  0.02  |  5     # iopfreq | nomeg | omegmax | omegmin | nomeg_blk
-%                                 # iopfreq= 1 (equally spaced), 2 (Gauss-Laguerre) or 3 (double Gauss-Legendre) 
+%                                 # iopfreq= 4 (tan-mesh)
 
 This will use tan-mesh of 32 Matsubara points, with maximum value set at 50Hartree, and minimum at 0.005 (or 0.02) Hartree. 
 
@@ -108,8 +108,8 @@ Second, we recommend one to reduce "emingw" and "emaxgw" in "gw.inp", which stan
 Only bands near the Fermi energy should be corrected by self-energy, as analytic continuation at very high excited states is inacurate anyway.
 For several alkali metals, we could use
 
-emingw = -0.5                # emingw and emaxgw ( unit --  Ry. ) are used to control the range of bands 
-emaxgw =  1.0                # for which GW correction are going to be calculated. Only states whose LDA energies 
+emingw = -0.5                # ( unit in Ry. ) controls the range of bands 
+emaxgw =  1.0                # for which GW correction are calculated.
 
 Finally, we recommend to change the analytic continuation. This last step could be done at postprocessing, and does not necessary need to be performed here.
 The recommened (and most precise) method for analytic continuation seems to be old-fashioned Pade, which is iopac==0. 
@@ -118,13 +118,12 @@ We could also use iopac=2, which uses quasiparticle approximation, and estimates
 So we recommend iopac=0, i.e., standard Pade approximation.
 
 %SelfEnergy             # option for correlation self-energy 
- 2  |  0   |   0       # <npol> |  <iopes>  |  <iopac> 
+ 2  |  0   |   0        # <npol> |  <iopes>  |  <iopac> 
 %                       # Number of poles ( previous maxexp + 1, valid range: 2.. nomeg/2 ) 
 
 
 Three other parameter might need some adjustment, although they are have pretty good default values.
-To converge the gap of semiconductors, you might to study their effect on the gap size. The parameters that control the size of the product basis are : "lmbmax", "Q_mb", and "MB_emax".
-Here lmbmax is set to 3 by default, and controls maximum L of the radial functions when constructing the product basis. If lmbmax=3, the product basis will have maximum L=6 (twice the maximum of the radial functions).
+To converge the gap of semiconductors, you might want to study their effect on the gap size. The parameters that control the size of the product basis are : "lmbmax", "Q_mb", and "MB_emax". Here lmbmax is set to 3 by default, and controls maximum L of the radial functions when constructing the product basis. If lmbmax=3, the product basis will have maximum L=6 (twice the maximum of the radial functions).
 In most cases this is already very precise, but to get the second digits of the gap in Si, one needs to increase this number to lmbmax=5.
 
 Q_mn is set to 0.75, and is the upper cutoff for the plane wave basis in the interstitials (for the product basis). Here Q_mb=0.75 means that the cutoff will be 0.75*RKmax from case.in1 file, which is 7 by default in Wien2k.
@@ -147,8 +146,7 @@ mpirun -n xx pygw.py
 
 where xx should be comensurate with the number of q-points. For 4x4x4 grid, 64 cores is the best option, and more would not speed up the calculation.
 
-4) once the job is done, you can postprocess and plot bands. First produce case.energy_band file, which is the energy file of a regular 
-dft calculation when plotting bands, i.e., using case.klist_band
+4) once the job is done, you can postprocess and plot bands. First produce case.energy_band file, which is the energy file of a regular dft calculation when plotting bands, i.e., using case.klist_band
 
 Next execute
 
