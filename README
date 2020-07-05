@@ -1,5 +1,5 @@
-PyGW code for G0W0 and GW0 calculations. 
------------------------------------------
+PyGW is an electronic structure code using G0W0 and GW0 calculations for realistic materials
+--------------------------------------------------------------------------------------------
 
 It is build on top of Wien2k DFT code and is implemented in Python. For speed, some parts are coded in fortran and converted to python modules using f2py.
 But most of these algorithms are also coded in Python, so that are easier to read and understand, and have an if FORT statement, which can invoke its Python or fortran version.
