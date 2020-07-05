@@ -2,7 +2,7 @@ PyGW is an electronic structure code using G0W0 and GW0 calculations for realist
 --------------------------------------------------------------------------------------------
 
 It is build on top of Wien2k DFT code and is implemented in Python. For speed, some parts are coded in fortran and converted to python modules using f2py.
-But most of these algorithms are also coded in Python, so that are easier to read and understand, and have an if FORT statement, which can invoke its Python or fortran version.
+But most of these algorithms are also coded in Python, so that they are easier to read and understand. We use an "if FORT" statement, which can invoke the Python or the fortran version.
 
 Earlier version of PyGW code closely followed Gap2 code, and was carefully checked with Gap2 code for bugs.
 Here is the link to Gap2 code:
