@@ -550,7 +550,8 @@ class ProductBasis:
             iateq_ind += [iat]*strc.mult[iat]
         
         # Calculate the dimension of djmm
-        maxbigl = amax(self.big_l)
+        #maxbigl = amax(self.big_l)
+        maxbigl = max([max(self.big_l[iat]) for iat in range(len(self.big_l))])   # bug jul.7 2020
         dimdj=(maxbigl+1)*(maxbigl+2)*(4*maxbigl+3)/6
         ndf = len(iateq_ind)
         #print 'ndf=', ndf, 'dimdj=', dimdj
@@ -761,7 +762,9 @@ class KohnShamSystem:
         # Now we change the band energies so that EF=0
         self.Ebnd -= EF
         if len(core.corind)>0:
-            nsp,nat,nc = shape(core.eig_core)
+            nsp = len(core.eig_core)       # bug jul.7 2020
+            nat = len(core.eig_core[0])    # bug jul.7 2020
+            #nsp,nat,nc = shape(core.eig_core)
             for isp in range(nsp):
                 for iat in range(nat):
                     core.eig_core[isp][iat][:] = array(core.eig_core[isp][iat][:])*Ry2H - EF
@@ -900,13 +903,13 @@ class KohnShamSystem:
         for iat in range(strc.nat): Vxclm[iat] *= Ry2H
         self.Vxcs  *= Ry2H
         Convert2CubicPotential(Vxclm, lmxc, strc)
-
+        
         maxlxc = max([len(lmxc[iat]) for iat in range(strc.nat)])
         # create fortran equivalent of lmxc
         self.lxcm_f = zeros(strc.nat, dtype=int)
         self.lmxc_f = zeros((2,maxlxc,strc.nat), dtype=int, order='F')  
         for iat in range(strc.nat):
-            self.lxcm_f = len(lmxc[iat])
+            self.lxcm_f[iat] = len(lmxc[iat])    # bug jul.7 2020
             for lxc in range(len(lmxc[iat])):
                 self.lmxc_f[:,lxc,iat] = lmxc[iat][lxc][:]
         
@@ -2347,7 +2350,7 @@ class MatrixElements2Band:
             nim = len(pb.big_l[iat])
             for jat in range(strc.nat):
                 njm = len(pb.big_l[jat])
-                rtlij[:njm,:nim,jat,iat] = outer(pb.rtl[jat] , pb.rtl[iat])
+                rtlij[:njm,:nim,jat,iat] = outer(pb.rtl[jat,:njm] , pb.rtl[iat,:nim])   # bug jul.7 2020
         
         #tm19 = timer()
         Vmatit = zeros((loctmatsize,pw.ngq_barc[iq]), dtype=complex)

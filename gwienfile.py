@@ -742,7 +742,7 @@ def Read_energy_file(filename, strc, fout, give_kname=False,Extended=False):
     fi = open(filename, 'r')
     lines = fi.readlines()
     fi.close()
-    iln = 2
+    iln = 2*strc.nat  # bug jul.7.2020
     if give_kname: knames=[]
     Ebnd=[]
     klist=[]
@@ -807,10 +807,9 @@ def Read_xc_file_dimension(case, strc, fout, ReadAll=False):
                 else:
                     ipt += 4
                 if ipt>=npt: break
-            #print lm, Vxc
             iln += 2
-        iln += 4
-    iln += 2
+        iln += 5   # bug jul. 7, 2020
+    iln += 1       # bug jul. 7, 2020
     nksxc = int(lines[iln][13:19])
     iln += 1
     kxcmax = 0
@@ -849,10 +848,10 @@ def Read_xc_file(case, strc, fout):
                     if ipt >= npt: break
                 if ipt>=npt: break
             iln += 2
-        iln += 4
+        iln += 5     # bug jul.7 2020
         lmxc.append( _lmxc_ ) # lmxc[iat][lxc][0-1]
         Vxclm.append( Vxc )  # Vxclm[iat][lxc,ir]
-    iln += 2
+    iln += 1         # bug jul.7 2020
     nksxc = int(lines[iln][13:19])
     iln += 1
     kxcmax = 0
@@ -1202,8 +1201,10 @@ class CoreStates:
             print >> fout, 'l_core_max=', l_core_max, 'nclm_max=', nclm_max
             
             # self.ul_core[isp][iat][ic][ipt]
-            self.ul_core =  [[[] for i in range(ncore[iat])] for j in range(strc.nat)]
-            self.us_core =  [[[] for i in range(ncore[iat])] for j in range(strc.nat)]
+            #self.ul_core =  [[[[] for i in range(ncore[iat])] for iat in range(strc.nat)]]
+            #self.us_core =  [[[[] for i in range(ncore[iat])] for iat in range(strc.nat)]]
+            self.ul_core =  [[[] for iat in range(strc.nat)] for isp in range(nspin)]        # bug jul.7 2020
+            self.us_core =  [[[] for iat in range(strc.nat)] for isp in range(nspin)]        # bug jul.7 2020
             for  isp in range(nspin):
                 for iat in range(strc.nat):
                     #######
@@ -1225,7 +1226,6 @@ class CoreStates:
                                     ipt += 1
                                     if ipt >= npt: break
                                 if ipt >= npt: break
-                        
                         if self.occ_inc[iat][iorb] < 1e-2:
                             print >> fout, "  exclude core state ", nm 
                         else:
@@ -1288,11 +1288,11 @@ class CoreStates:
             print >> fout, 'corrind index='
             for ic in range(len(self.corind)):
                 print >> fout, 'iat=%3d idf=%3d ic=%3d lc=%3d mc=%3d' % tuple(self.corind[ic]), ' with weight=sqrt(%10.7f)' % (remember_weight[ic],)
-                
+        
         #print self.nclm
         #print self.clmind
         #print 'corind=', self.corind
-                        
+        
 class SCF2:
     def __init__(self, case, spin=''):
         self.case = case
