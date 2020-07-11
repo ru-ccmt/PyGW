@@ -554,7 +554,7 @@ class ProductBasis:
         maxbigl = max([max(self.big_l[iat]) for iat in range(len(self.big_l))])   # bug jul.7 2020
         dimdj=(maxbigl+1)*(maxbigl+2)*(4*maxbigl+3)/6
         ndf = len(iateq_ind)
-        #print 'ndf=', ndf, 'dimdj=', dimdj
+        #print 'ndf=', ndf, 'dimdj=', dimdj, 'iateq_ind=', iateq_ind
         # Allocate djmm and initialize it to zero
         self.djmm = zeros((dimdj,ndf), dtype=complex, order='F')
 
@@ -582,7 +582,7 @@ class ProductBasis:
                     idx = 2*(mu+1)+m+1  # index for l=1
                     self.djmm[idx,idf] = rotsph[m+1,mu+1]
                     if Debug_Print:
-                        print >> fout, 'djmm[idf=%2d,l=%2d,mu=%3d,m=%2d,idx=%4d]=%16.10f %16.10f' % (idf,1,mu,m,idx,self.djmm[idx,idf].real,self.djmm[idx,idf].imag)
+                        print >> fout, ' djmm[idf=%2d,l=%2d,mu=%3d,m=%2d,idx=%4d]=%16.10f %16.10f' % (idf+1,1,mu,m,idx+1,self.djmm[idx,idf].real,self.djmm[idx,idf].imag)
             #  Obtain the rotation matrix for j> 1 by recursive relation
             for l in range(2,maxbigl+1):
                 sql = sqrt(4*pi*(2*l+1)/(2*l-1.0)/3.)
@@ -611,7 +611,7 @@ class ProductBasis:
                         idx = l*(l+1)*(4*l-1)/6+(l+1)*(mu+l)+m
                         self.djmm[idx,idf] = _djmm_[l+mu,m]*prefac
                         if Debug_Print:
-                            print >> fout, 'djmm[idf=%2d,l=%2d,mu=%3d,m=%2d,idx=%4d]=%16.10f %16.10f' % (idf,l,mu,m,idx,self.djmm[idx,idf].real,self.djmm[idx,idf].imag)
+                            print >> fout, ' djmm[idf=%2d,l=%2d,mu=%3d,m=%2d,idx=%4d]=%16.10f %16.10f' % (idf+1,l,mu,m,idx+1,self.djmm[idx,idf].real,self.djmm[idx,idf].imag)
 
 
 def Check_Equal_k_lists(klist, kqm, fout):
@@ -800,7 +800,7 @@ class KohnShamSystem:
             
         nsp, nkp, band_max = shape(self.Ebnd)
         (heads, all_Gs, self.all_As, all_Ek) = w2k.Read_vector_file(case, strc, fout)
-
+        
         self.indgkir = []
         if self.PRINT:
             print >> fout, 'indgkir: only some G-vectors generated above are used in the vector file. indgkir is index to this subset of G-vectors'
@@ -823,7 +823,7 @@ class KohnShamSystem:
             self.indgkir.append(ind)
             # zzk == all_As[irk][ib,hsrows]
             # zzkall(:,:,irk,isp)=zzk
-
+        
         # In the next several lines, we will find permutation of the reciprocal vectors needed to transform
         # eigenvectors from an irreducible k-point mesh to generic all-k point mesh
         #Gbas = array(round_(kqm.gbas * kqm.aaa), dtype=int) # This transforms from lattice to cartesian coordinate system
@@ -831,8 +831,8 @@ class KohnShamSystem:
         
         ankp = kqm.ndiv[0]*kqm.ndiv[1]*kqm.ndiv[2]          # all k-points, reducible as well
         #print >> fout, 'Gbas=', Gbas
-        if self.PRINT:
-            print >> fout, 'allg0='
+        if True: #self.PRINT:
+            print >> fout, 'Umklap shifts for all k-points. (If any component is not 0 or 1, gap2 code would give different result)'
             for ik in range(ankp):
                 irk = kqm.kii_ind[ik]
                 #write(6,'(I4,1x,I4,1x,A,3I3,A,2x,A,3I3,A)') ikp, kpirind(ikp), '(', ikvec(:), ')', '(', irkvec(:), ')'
@@ -840,7 +840,8 @@ class KohnShamSystem:
                 if kqm.k_ind[irk] != ik : # this k-point is rreducible
                     isym = kqm.iksym[ik]       # which group operation was used to get this momentum vector
                     jkvec = dot(kqm.kirlist0[irk], latgen.tizmat[isym])
-                    g0 = map(lambda x: int( (1-sign(x))/2. ), jkvec)        # is equal to 1 if jkvec is negative
+                    #g0 = map(lambda x: int( (1-sign(x))/2. ), jkvec)        # is equal to 1 if jkvec is negative
+                    g0 = map(lambda x: Shift_to_1BZ(x/kqm.LCM), jkvec)
                     g0 = dot(kqm.k2icartes, g0)
                     #if latgen.ortho or strc.lattic[:3]=='CXZ':
                     #    g0 = dot(Gbas, g0)
@@ -870,7 +871,6 @@ class KohnShamSystem:
                 #g0 = map(lambda x: int( (1-sign(x))/2. ), jkvec)    # BUG WAS HERE: This shift delta_G to bring k-point into 1BZ
                 g0 = map(lambda x: Shift_to_1BZ(x/kqm.LCM), jkvec)   # This shift delta_G to bring k-point into 1BZ, i.e., k_{1BZ}-k
                 g0 = dot(kqm.k2icartes, g0)                          # now transforming to semi-cartesian coordinates (from lattice integer coordinates)
-                
                 tsymat = strc.timat[isym]  # symmetry operation that transforms k_generic[ik] = k_irr[irk]*timat + delta_G
                 # Notice that this transforms the vector directly to cartesian coordinate system, not lattice system, like latgen.tizmat[isym]
                 
@@ -1022,7 +1022,7 @@ class KohnShamSystem:
         nbandsgw = self.nbgw - self.ibgw
         nvelgw = core.nval - 2*self.ibgw
         print >> fout, ' Nr. of bands (nbmax)               :', nbnd
-        print >> fout, ' Nr. of bands used in P (nmaxpol)   :', self.nbmaxpol
+        print >> fout, ' Nr. of bands used in P (nbmaxpol)   :', self.nbmaxpol
         print >> fout, ' Nr. of bands for Sc(nbmaxsc)       :', self.nbmaxsc
         print >> fout, ' Nr. of gw bands (nbandsgw)         :', nbandsgw
         print >> fout, ' Range of GW bands (ibgw,nbgw)      :', self.ibgw,self.nbgw, 'with energy range', io_emingw, 'to', io_emaxgw, 'Hartree'
@@ -1362,9 +1362,8 @@ class PlaneWaves:
     def __init__(self, hsrws, kmr, pwm, case, strc, in1, latgen, kqm, debug, fout):
         tm1 = timer()
         maxngk = max(hsrws)
-        #nbmax = min(map(len, Ebnd))
         kxcmax = w2k.Read_xc_file_dimension(case, strc, fout)
-
+        
         kmax = in1.rkmax/min(strc.rmt)
         ng = zeros(3,dtype=int)
         for i in range(3):
@@ -1373,10 +1372,10 @@ class PlaneWaves:
         
         print >> fout, 'kxcmax=', kxcmax, 'ng1,ng2,ng3=', ng
         igm = array([max(4*ng[i],2*kxcmax+ng[i]) for i in range(3)],dtype=int)
-
+        
         ng = map(int, igm/2)
         npw = (2*ng[0]+1)*(2*ng[1]+1)*(2*ng[2]+1)
-
+        
         maxgxc = 2.*kmax+4
         maxgcoul = kmr*kmax*(pwm+2.)
         gmax = max(maxgxc, maxgcoul)
@@ -1384,7 +1383,7 @@ class PlaneWaves:
         tm2 = timer()
         print >> fout, '## PlaneWave t(read_xc)            =%14.9f' % (tm2-tm1,)
         print >> fout, 'gmax=', gmax, 'br2=', latgen.br2
-
+        
         ortho = (latgen.ortho or strc.lattice[1:3]=='CXZ')
         if FORT:
             #glen=[]    # |G|
@@ -1434,6 +1433,12 @@ class PlaneWaves:
         tm3 = timer()
         print >> fout, '## PlaneWave t(gen_ipw_fixed_basis)=%14.9f' % (tm3-tm2,)
         #####
+        if False:
+            ft = open('python_sorted_index.dat', 'w')
+            for i in range(len(self.glen)):
+                print >> ft, '%4d  %4d%4d%4d  %15.10f  %15.10f%15.10f%15.10f' % (i+1, self.gindex[i,0], self.gindex[i,1], self.gindex[i,2], self.glen[i], self.G_c[i,0], self.G_c[i,1], self.G_c[i,2])
+            ft.close()
+            
         # This is just temporary to debug the code, we want to be completely compatible with the fortran cdoe.
         if False:  ##### ATTENTION ????
             fix = open('sorted_index.dat')
@@ -1450,7 +1455,7 @@ class PlaneWaves:
             self.glen = array(self.glen)
             self.G_c = array(self.G_c)
             self.gindex = array(self.gindex, dtype=int)
-        
+            
         ##### 
         self.ig0={}
         for i in range(ngindx):
@@ -1461,11 +1466,10 @@ class PlaneWaves:
         G_c  = self.G_c       # \vG in cartesian
         gindex = self.gindex  # \vG in integer
         
-        if True:
+        if Debug_Print:
             print >> fout, 'Sorted Gs'
             for i0 in range(len(gindex)):
                 print >> fout, '%4d ' % (i0+1,), '(%3d,%3d,%3d)' % tuple(self.gindex[i0]), '%9.5f' % (self.glen[i0],), '[%9.5f,%9.5f,%9.5f]' % tuple(self.G_c[i0])
-
         
         tm4 = timer()
         print >> fout, '## PlaneWave t(sort_ipw)           =%14.9f' % (tm4-tm3,)
@@ -1503,7 +1507,7 @@ class PlaneWaves:
             for i in range(len(gindex)):
                 ki, ak = gindex[i], glen[i]  # ki=(i0,i1,i2); ak=|kc|
                 print >> fout, '%4d ' % (i+1,), '%3d'*3 % tuple(ki), ' %16.11f%16.11f' %(self.ipwint[i].real, self.ipwint[i].imag)
-
+        
         tm5 = timer()
         print >> fout, '## PlaneWave t(integral_ipw)       =%14.9f' % (tm5-tm4,)
         # First determine the maximum number of plane waves in variuos parts of the calculation
@@ -1732,49 +1736,49 @@ class Kweights:
         #for ik in range(ankp):
         #    print >> fout, '%3d %10.6f' % (ik, kwt_bz[ik])
     
-def ImproveDegEigenvectors(eigvals, sgi):
-    smalle = 1e-10
-    N = len(eigvals)
-    its=0
-    while its < N:
-        ite =  its+1
-        while (ite<N and abs(eigvals[ite]-eigvals[its])<smalle): ite += 1 # looping through almost equal eigenvalues
-        # In case of exactly two equal eigenvalues, we can make many entries exactly vanish. We will find the best linear combination of the two
-        # eigenvectors, such that most entries in one eigenvector are zero
-        if (ite-its == 2 ):
-            #print 'deg=', its,ite, eigvals[its:ite]
-            rt = [sgi[i,(its+1)]/sgi[i,its] if abs(sgi[i,its])>1e-50 else rand() for i in range(N)]
-            #rt = sgi[:,(its+1)]/sgi[:,its] # ratio between all components of the two eigenvectors
-            indx = numpy.argsort(rt)       # sort all ratio components
-            #print 'sorted=', [rt[indx[i]] for i in range(len(indx))]
-            # find which ratio occurs most often, i.e., has largest degeneracy in ratio vector
-            max_deg=1
-            max_pair=()
-            jts = 0
-            while jts < N:
-                jte = jts+1
-                while (jte < N and abs(rt[indx[jte]]-rt[indx[jts]])<1e-6 ): jte += 1 # loop over all components of the eigenvector, which have degenerate ratio
-                if (jte-jts > max_deg): 
-                    max_deg = jte-jts   # this is the largest degeneracy up to now, with max_deg components degenrate
-                    #print 'num=', jte-jts, jts,jte, [rt[indx[j]] for j in range(jts,jte)]
-                    max_pair = (jts,jte)
-                jts=jte
-            #print 'max_pair=', max_pair, sorted([indx[i] for i in range(max_pair[0],max_pair[1])])
-            if max_pair: # we found degeneracy, and is saved in max_pair. Degenrate components are: sorted([indx[i] for i in range(max_pair[0],max_pair[1])])
-                r = rt[indx[max_pair[0]]] # this is the ratio of all those degenrate components
-                a, b = r/sqrt(1+r**2), 1.0/sqrt(1+r**2) # coefficients of the linear combination
-                #print 'r=', r, 'a=', a, 'b=', b
-                vits=  b*sgi[:,its] + a*sgi[:,its+1]
-                vit = -a*sgi[:,its] + b*sgi[:,its+1]
-                #print 'old[it] =', ('%10.6f '*N) % tuple(sgi[:,its+1].real)
-                #print 'old[its]=', ('%10.6f '*N) % tuple(sgi[:,its].real)
-                #print 'new[it] =', ('%10.6f '*N) % tuple(vit.real)
-                #print 'new[its]=', ('%10.6f '*N) % tuple(vits.real)
-                #print 'orthogonality=', [dot(vits,vits), dot(vits,vit), dot(vit,vits), dot(vit,vit)]
-                sgi[:,its]   = vits
-                sgi[:,its+1] = vit
-        its = ite
-    return sgi
+#def ImproveDegEigenvectors(eigvals, sgi):
+#    smalle = 1e-10
+#    N = len(eigvals)
+#    its=0
+#    while its < N:
+#        ite =  its+1
+#        while (ite<N and abs(eigvals[ite]-eigvals[its])<smalle): ite += 1 # looping through almost equal eigenvalues
+#        # In case of exactly two equal eigenvalues, we can make many entries exactly vanish. We will find the best linear combination of the two
+#        # eigenvectors, such that most entries in one eigenvector are zero
+#        if (ite-its == 2 ):
+#            #print 'deg=', its,ite, eigvals[its:ite]
+#            rt = [sgi[i,(its+1)]/sgi[i,its] if abs(sgi[i,its])>1e-50 else rand() for i in range(N)]
+#            #rt = sgi[:,(its+1)]/sgi[:,its] # ratio between all components of the two eigenvectors
+#            indx = numpy.argsort(rt)       # sort all ratio components
+#            #print 'sorted=', [rt[indx[i]] for i in range(len(indx))]
+#            # find which ratio occurs most often, i.e., has largest degeneracy in ratio vector
+#            max_deg=1
+#            max_pair=()
+#            jts = 0
+#            while jts < N:
+#                jte = jts+1
+#                while (jte < N and abs(rt[indx[jte]]-rt[indx[jts]])<1e-6 ): jte += 1 # loop over all components of the eigenvector, which have degenerate ratio
+#                if (jte-jts > max_deg): 
+#                    max_deg = jte-jts   # this is the largest degeneracy up to now, with max_deg components degenrate
+#                    #print 'num=', jte-jts, jts,jte, [rt[indx[j]] for j in range(jts,jte)]
+#                    max_pair = (jts,jte)
+#                jts=jte
+#            #print 'max_pair=', max_pair, sorted([indx[i] for i in range(max_pair[0],max_pair[1])])
+#            if max_pair: # we found degeneracy, and is saved in max_pair. Degenrate components are: sorted([indx[i] for i in range(max_pair[0],max_pair[1])])
+#                r = rt[indx[max_pair[0]]] # this is the ratio of all those degenrate components
+#                a, b = r/sqrt(1+r**2), 1.0/sqrt(1+r**2) # coefficients of the linear combination
+#                #print 'r=', r, 'a=', a, 'b=', b
+#                vits=  b*sgi[:,its] + a*sgi[:,its+1]
+#                vit = -a*sgi[:,its] + b*sgi[:,its+1]
+#                #print 'old[it] =', ('%10.6f '*N) % tuple(sgi[:,its+1].real)
+#                #print 'old[its]=', ('%10.6f '*N) % tuple(sgi[:,its].real)
+#                #print 'new[it] =', ('%10.6f '*N) % tuple(vit.real)
+#                #print 'new[its]=', ('%10.6f '*N) % tuple(vits.real)
+#                #print 'orthogonality=', [dot(vits,vits), dot(vits,vit), dot(vit,vits), dot(vit,vit)]
+#                sgi[:,its]   = vits
+#                sgi[:,its+1] = vit
+#        its = ite
+#    return sgi
 
     
 class MatrixElements2Band:
@@ -1840,10 +1844,21 @@ class MatrixElements2Band:
                 alm,blm,clm = lapwc.gap2_set_lapwcoef(kl, ks.indgk[ik], 1, True, ks.nv[irk], pw.gindex, radf.abcelo[isp], strc.rmt, strc.vpos, strc.mult, radf.umt[isp], strc.rotloc, latgen.trotij, latgen.Vol, kqm.k2cartes, in1.nLO_at, in1.nlo, in1.lapw, in1.nlomax)
             tm11 = timer()
             
+            (ngk,ntnt,ndf) = shape(alm)
+            (ngk,nLOmax,ntnt,ndf) = shape(clm)
             # eigen-vector
             Aeig = array(ks.all_As[irk][:nbmax,:],dtype=complex)
-            (ngk,nLOmax,ntnt,ndf) = shape(clm)
-            (ngk,ntnt,ndf) = shape(alm)
+            if False:
+                print 'alm,blm'
+                for idf in range(ndf):
+                    for ig in range(ngk):
+                        for ilm in range(ntnt):
+                            print 'irk=%2d idf=%2d i=%3d j=%3d alm=%14.9f%14.9f blm=%14.9f%14.9f' % (irk+1, idf+1, ig+1, ilm+1, alm[ig,ilm,idf].real, alm[ig,ilm,idf].imag, blm[ig,ilm,idf].real, blm[ig,ilm,idf].imag)
+                print 'eigenvector', shape(ks.all_As[irk])
+                for ib in range(nbmax):
+                    for j in range(ngk):
+                        print 'irk=%2d ib=%3d j=%3d A=%14.9f%14.9f' % (irk+1,ib+1,j+1,Aeig[ib,j].real,Aeig[ib,j].imag)
+            
             # And now change alm,blm,clm to band basis, which we call alfa,beta,gama
             alfa = reshape( la.matmul(Aeig, reshape(alm, (ngk,ntnt*ndf)) ), (nbmax,ntnt,ndf) )
             beta = reshape( la.matmul(Aeig, reshape(blm, (ngk,ntnt*ndf)) ), (nbmax,ntnt,ndf) )
@@ -1861,13 +1876,13 @@ class MatrixElements2Band:
             tm13 = timer()
             
             if self.DEBUG:
-                ndf = sum(strc.mult)
+                print 'alfabeta'
                 for idf in range(ndf):
                     for l in range(in1.lmax):
                         for m in range(-l,l+1):
                             lm = l*l + l + m 
                             for ie in range(nbmax):
-                                print ('%s%2d '+'%s%3d '*2+ '%s%14.9f%14.9f  '*3) % ('irk=',irk+1,'lm=',lm,'ie=',ie+1, 'alf=', alfa[ie,lm,idf].real, alfa[ie,lm,idf].imag, 'bet=', beta[ie,lm,idf].real, beta[ie,lm,idf].imag, 'gam=', gama[ie,0,lm,idf].real, gama[ie,0,lm,idf].imag)
+                                print ('%s%2d '+'%s%3d '*2+ '%s%14.9f%14.9f '*3) % ('irk=',irk+1,'lm=',lm+1,'ie=',ie+1, 'alf=', alfa[ie,lm,idf].real, alfa[ie,lm,idf].imag, 'bet=', beta[ie,lm,idf].real, beta[ie,lm,idf].imag, 'gam=', gama[ie,0,lm,idf].real, gama[ie,0,lm,idf].imag)
             
             # This part calculates index array jimp[iv1,iv2] which finds index of two reciprocal vectors G1-G2
             # in fixed basis (pw.gindex), where  G1 and G2 are reciprocal vectors from Hamiltonian
@@ -1906,8 +1921,9 @@ class MatrixElements2Band:
             tm14 = timer()
             t_muffint  += tm13-tm12
             t_interst += tm14-tm13
-
-            Vxct[irk,:,:] = Vxcmt + Vxci
+            
+            ns,ne = ks.ibgw,ks.nbgw
+            Vxct[irk,ns:ne,ns:ne] = Vxcmt[ns:ne,ns:ne] + Vxci[ns:ne,ns:ne]
             if self.DEBUG:
                 for i in range(len(Vxcmt)):
                     print '%s%3d %s%14.9f%14.9f' % ('ie=', i+1, 'vxcmt=', Vxcmt[i,i].real, Vxcmt[i,i].imag)
@@ -2125,6 +2141,13 @@ class MatrixElements2Band:
     def OrthogonalizedBasisInterstitials(self, iq, pw):
         ### mpwipw
         ### diagipw
+        if False:
+            print 'pw.indgq'
+            for ipw in range(pw.ngq[iq]):
+                idG = pw.gindex[pw.indgq[iq,ipw],:]
+                print '%4d%4d' % (ipw+1,pw.indgq[iq,ipw]+1), ' ', ('%3d'*3) % tuple(idG), '  %14.10f%14.10f' % (pw.ipwint[ipw].real,pw.ipwint[ipw].imag)
+            print 'pw.indgq_done'
+        
         if FORT:
             # Computes overlap between plane waves : olap[jpw,ipw] = <G_{jpw}|G_{ipw}>_{interstitials}/V_{cell}
             olap = fCl.cmp_pw_olap2(pw.indgq[iq], pw.ipwint, pw.gindex, self.i_g0, pw.ngq[iq], pw.ngq[iq])
@@ -2143,16 +2166,21 @@ class MatrixElements2Band:
         if sum(abs(olap.imag)) < 1e-7:  # overlap is real
             olap = array(olap.real,dtype=float)
         
+        if False:
+            print 'olap_PW'
+            for ipw in range(pw.ngq[iq]):
+                for jpw in range(pw.ngq[iq]):
+                    print '%3d %3d %17.12f%17.12f%17.12f%17.12f' % (ipw+1,jpw+1,olap[ipw,jpw].real,-olap[ipw,jpw].imag,olap[jpw,ipw].real,-olap[jpw,ipw].imag)
+            
         # diagonalizing overlap basis for interstitial
         epsipw, sgi = linalg.eigh(olap)   # sgi[pw.ngq[iq],pw.ngq[iq]]
         
         if False:
-            print 'eigenvectors:'
+            print 'epsipw:'
             for i in range(len(epsipw)):
-                print '%2d %s%10.8f ' % (i,'e=',epsipw[i]),
-                print ('%10.6f '*len(epsipw)) % tuple(sgi[:,i].real)
+                print '%2d %s%16.12f ' % (i,'e=',epsipw[i])
+                #print ('%10.6f '*len(epsipw)) % tuple(sgi[:,i].real)
         
-        sgi = ImproveDegEigenvectors(epsipw, sgi)
 
         if False: ##### ATTENTION : ONLY FOR DEBUGGING
             dat = loadtxt('si_eigvec_fort.dat')
@@ -2160,15 +2188,21 @@ class MatrixElements2Band:
             sgi = sgi_fort
             
         # Finally, taking 1/sqrt(olap) 
-        #??### LAST CHANGE
         if Real_sqrt_olap:
             # Now we will try to compute real 1/sqrt(O) = U 1/sqrt(eig) U^H
             sgiH = la.matmul(sgi, dot(diag(1/sqrt(abs(epsipw))), conj(sgi.T)) )
         else:
+            #sgi = ImproveDegEigenvectors(epsipw, sgi)
             sgiH = conj(sgi.T)
             for i in range(len(epsipw)):
                 sgiH[i,:] *= 1/sqrt(abs(epsipw[i]))
-            
+
+        if False:
+            print 'sgi='
+            for ipw in range(pw.ngq[iq]):
+                for jpw in range(pw.ngq[iq]):
+                    print '%3d %3d %17.12f%17.12f%17.12f%17.12f' % (ipw+1,jpw+1,sgiH[ipw,jpw].real,-sgiH[ipw,jpw].imag,sgiH[jpw,ipw].real,-sgiH[jpw,ipw].imag)
+        
         if FORT:
             # coul_mpwipw
             # note that this matrix of overlap tmat[i,j]=<G_i|G_j> is non-diagonal, and is of shape tmat[ngq,ngq_barc], where ngq_barc>ngq.
@@ -2185,11 +2219,13 @@ class MatrixElements2Band:
         # mpwipw[i,j] = <G_i,G_j>
         # where G_j has much larger dimension that G_i, because it needs to allow the possibility of G_j to be any combination of reciprocal vectors from KS-vector file.
         mpwipw = dot(sgiH,tmat)   # mpwipw[pw.ngq[iq],pw.ngq_barc[iq]]
-        
-        #print 'pre_mpwipw'
-        #for jpw in range(pw.ngq[iq]):
-        #    for ipw in range(pw.ngq[iq]):
-        #        print '%3d %3d %16.10f %16.10f' % (jpw+1,ipw+1,mpwipw[jpw,ipw].real,mpwipw[jpw,ipw].imag)
+
+        if False:
+            print 'mpwipw'
+            for jpw in range(pw.ngq[iq]):
+                for ipw in range(pw.ngq_barc[iq]):
+                    print '%3d %4d %16.10f %16.10f' % (jpw+1,ipw+1,mpwipw[jpw,ipw].real,mpwipw[jpw,ipw].imag)
+            print 'end_mpwipw'
         return mpwipw
     
     def fwi0(self, latgen, pb):
@@ -2223,7 +2259,7 @@ class MatrixElements2Band:
         alat = array([strc.a, strc.b, strc.c])
 
         vq = kqm.qlistc[iq,:]/float(kqm.LCMq)
-
+        
         if False:  ##### ATTENTION ONLY FOR DEBUGGING?????
             dat = array(loadtxt('indgq_fort.dat').T, dtype=int)
             pw.indgq[iq,:pw.ngq_barc[iq]] = dat[1,:]
@@ -2321,7 +2357,6 @@ class MatrixElements2Band:
             #for ig in range(pw.ngq[iq]):
             #    print ig, pw.indgq[iq,ig], dat[1,ig]
         
-        
         tm10 = timer()
         self.mpwipw = self.OrthogonalizedBasisInterstitials(iq, pw)
         
@@ -2343,7 +2378,7 @@ class MatrixElements2Band:
             big_l[:nm,iat] = pb.big_l[iat][:]                                             # saving big_l to firtran-like array
             idf += strc.mult[iat]                                                         # what is the index of atom in array of all atoms, including equivalent
         im_start[strc.nat] = loctmatsize                                                  # the last index for product basis on the last atom
-
+        
         #tm18 = timer()
         rtlij = zeros((max_nmix,max_nmix,strc.nat,strc.nat),order='F')
         for iat in range(strc.nat):
@@ -2366,6 +2401,7 @@ class MatrixElements2Band:
             tm21 = timer()
             
             istr, iend = im_start[iat], im_start[iat+1]
+            
             # Now computing matrix elements <e^{(q+G)\vr}|V_{coul}|u_{irm}>  = 4*pi/|q+G|^2 e^{-i(q+G)_R }<q+G|u_{irm}>
             Vmatit[istr:iend,:] = fCl.mixed_coulomb(vq,iat+1,True,jlam,pw.gindex,pw.indgq[iq],pw.gqlen[iq],gqlen,pw.G_unique[iq],pw.ngq_barc[iq],iend-istr,pb.big_l[iat],kqm.k2cartes,strc.rotloc,latgen.trotij,strc.mult,strc.vpos,latgen.Vol)
             tm22 = timer()
@@ -2398,7 +2434,7 @@ class MatrixElements2Band:
         m2 = dot(self.mpwipw, Vmm.T)
         Vmat[loctmatsize:mbsize,loctmatsize:mbsize] = m2[:,:]
         self.loctmatsize = loctmatsize
-
+            
         tm11 = timer()
         print >> fout, '## Coulomb: t(optimal_etas_cutoffs)=%14.9f' % (tm10-tm9,)
         print >> fout, '## Coulomb: t(Ewald)               =%14.9f' % (tm17-tm16,)
@@ -2958,7 +2994,7 @@ class MatrixElements2Band:
         big_l = zeros( (max_nmix,strc.nat), dtype=int, order='F' )                        # big_l in fortran array form
         for iat in range(strc.nat):
             big_l[:len(pb.big_l[iat]),iat] = pb.big_l[iat][:]                             # saving big_l to fortran-like array
-
+        
         (mbsize,matsize) = shape(self.barcvm)
         (nb1_kcw,nb2_kcw,nkp_kcw,nom_nil) = shape(kcw)
         
@@ -2988,20 +3024,20 @@ class MatrixElements2Band:
                 minm = concatenate( (minc0, minm0), axis=0 ) # minc0[core-states,unoccupied-bands,product-basis], minm0[occupied-bands,unoccupied-bands,product-basis]
             else:
                 minm = minm0
-
+            
             nb1,nb2,matsiz = shape(minm)
             Ndouble_bands = (ks.ncg_p+nvbm)*(ks.nbmaxpol-ncbm)
             
             if (matsiz != matsize):
                 print 'Error : matsize=', matsize, 'and matsiz=', matsiz
             if False:
-                print >> fout, 'shape(minm)=', shape(minm)
-                print >> fout, 'ik=', ik, 'minm'
+                print >> fout, 'shape(minm)=', shape(minm), 'shape(minc0)=', shape(minc0), 'shape(minm0)=', shape(minm0)
+                print >> fout, 'ik=', ik, 'calceps:minm'
                 for imix in range(matsiz):
                     for ie1 in range(nb1):
                         for ie2 in range(nb2):
-                            print >> fout, '%3d %3d %3d %16.12f%16.12f' % (imix, ie1, ie2, minm[ie1,ie2,imix].real, minm[ie1,ie2,imix].imag)
-                sys.exit(0)
+                            print >> fout, '%3d %3d %3d %16.12f%16.12f' % (imix+1, ie1+1, ie2+ncbm+1, minm[ie1,ie2,imix].real, minm[ie1,ie2,imix].imag)
+                print >> fout, 'calceps:minm_end'
                 
             t10 = timer()
             if iq==0:
@@ -3033,7 +3069,6 @@ class MatrixElements2Band:
             t11 = timer()
             t_times[5] += t11-t10
             
-
             if False:
                 minm2 = reshape(minm, (nb1*nb2,matsiz))
                 print >> fout, 'minm2='
@@ -3056,7 +3091,7 @@ class MatrixElements2Band:
             cminm2 = conj(minm2)
             minm2Tc = minm2.T*coef
             t_times[6] += timer()-t12
-
+            
             #nvbm, ncbm = ks.nomax_numin[0]+1, ks.nomax_numin[1]
             #kcw = zeros( (ks.ncg+nvbm,ks.nbmaxpol-ncbm,nkp,nom) )
             #kcw[:(ks.ncg_p+nvbm),:(ks.nbmaxpol-ncbm),ik,iom]
@@ -3209,7 +3244,7 @@ class MatrixElements2Band:
             for iom in range(len(fr.omega)):
                 for i in range(matsiz):
                     for j in range(matsize):
-                        print >> fout, '%4d %4d %4d %18.14f%18.14f' % (iom+1, i+1, j+1, eps[i,j,iom].real, eps[i,j,iom].imag)
+                        print >> fout, '%4d %4d %4d %18.14f%18.14f' % (iom+1, i+ks.ibgw+1, j+1, eps[i,j,iom].real, eps[i,j,iom].imag)
 
         (matsiz1,matsiz2,nom_nil) = shape(eps)
         sc_p = zeros( (nirkp, ks.nbgw-ks.ibgw, len(fr.omega) ), dtype=complex )
@@ -3472,7 +3507,7 @@ class G0W0:
         divs = io.nkdivs
         #divs = [15,15,15]
         kqm = KQmesh(divs, io.k0shift, strc, latgen, fout)
-        kqm.tetra(latgen, fout)
+        kqm.tetra(latgen, strc, fout)
 
         #print >> fout, 'mem-usage[KQmesh]=', ps.memory_info().rss*b2MB,'MB'
         

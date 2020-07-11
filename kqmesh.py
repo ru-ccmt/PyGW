@@ -186,7 +186,7 @@ class KQmesh:
         #
         # ikpid(redkp[cornid]) = kii_ind[i]
 
-    def tetra(self, latgen, fout):
+    def tetra(self, latgen, strc, fout):
         """The tetrahedra are tried to be related by the symmetry. The tetrahedron is defined
            by the irreducible k-point on the vertices. If the vertices of two tetrahedra goes
            into the same irreducible point set, the weight of this tetrahedron will be added 
@@ -403,6 +403,7 @@ class KQmesh:
                 self.qlistc[iq,:] = dot(self.k2icartes, self.qlist[iq,:])
         else:
             self.kirlist = self.kirlist0
+            self.qlistc = self.qlist
             
         if True:
             print >> fout, '#k-mesh was transformed to cartesian=', (latgen.ortho or strc.lattice[1:3]=='CXZ')

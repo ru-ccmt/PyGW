@@ -1372,7 +1372,7 @@ subroutine calc_minc2(mmat,kmql,cstart,cend, mstart,mend,alfp,betp,gamp,s3r,cori
   !$OMP END PARALLEL DO
   deallocate( locmixind3 )
   if (.False.) then
-     print *, 'calc_minc'
+     print *, 'calc_minc2'
      do im=1,loctmatsize
         do ie2=1,mend-mstart
            do icg=1,cend-cstart
@@ -1380,6 +1380,7 @@ subroutine calc_minc2(mmat,kmql,cstart,cend, mstart,mend,alfp,betp,gamp,s3r,cori
            enddo
         enddo
      enddo
+     print *, 'calc_minc2_end'
   endif
 end subroutine calc_minc2
 

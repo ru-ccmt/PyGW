@@ -377,7 +377,7 @@ class Latgen:
         Nat_all = sum([len(strc.pos[i]) for i in range(len(strc.pos))])
         #print 'Nat_all=', Nat_all
         
-        self.trotij = zeros((Nat_all,3,3),dtype=int)
+        self.trotij = zeros((Nat_all,3,3))
         self.tauij  = zeros((Nat_all,3))
         
         nnat = 0
@@ -438,8 +438,9 @@ class Latgen:
                     # Note  in dmft1 and lapw2 we used : rotij_cartesian = BR1 * rotij * BR1inv^{-1}
                     #  but here we use the convention as in lapw1 : rotij_cartesian = BR2 * rotij * ((BR2^T)^{-1})^T
                     #  Note also that in this way we rotate real space vectors, not momentum space vectors. The latter are rotated with inverse of BR2 matrices (see Symoper)
-                    self.trotij[nnat,:,:] = transpose( dot( dot(self.gbas,self.trotij[nnat,:,:].T), self.rbas ) )
-                
+                    rtij = transpose( dot( dot(self.gbas,self.trotij[nnat,:,:].T), self.rbas ) )
+                    self.trotij[nnat,:,:] = rtij
+                    
                 print >> fout, 'For atom '+strc.aname[iat]+' ieq='+str(ieq)+' at pos=',cpos, 'found tauij=', self.tauij[nnat,:], 'rotij.T=', (self.trotij[nnat,:,:]).tolist()
                 nnat += 1
         
@@ -465,8 +466,8 @@ class Latgen:
                 #  Note that this is very different than in dmft1 or dmft2
         else:
             # we are forced to stary in cartesian system
-            print 'WARNING : Check Symoper if it really works. I think it does not'
-            self.tizmat = strc.timat
+            #print 'WARNING : Check Symoper if it really works. I think it does not'
+            self.tizmat = copy(strc.timat)
         
 class In1File:
     def __init__(self, case_file, strc, fout, lomax=-1):
@@ -879,9 +880,16 @@ def Read_vector_file(case, strc, fout):
         print >> fout, 'Found '+case+'.inso file, hence assuming so-coupling exists. Switching -so switch!'
         so = 'so'
         vectortype=complex
+        
+    if os.path.isfile(case+".in1c") and os.path.getsize(case+".in1c")>0:
+        print >> fout, 'Found '+case+'.in1c file, hence assuming complex eigenvector. Switching to complex!'
+        so = ''
+        vectortype=complex
+    
+    if vectortype==complex:
         vecread = rdVec.fvread3c
         vecwrite = rdVec.fvwrite3c
-        
+    
     maxkpoints = 10000
     # opens vector file
     heads=[]
@@ -896,7 +904,7 @@ def Read_vector_file(case, strc, fout):
         head = rdVec.fvread1(tape)
         (k, kname, wgh, ios, n0, nb) = head
         if ios!=0: break # vector file is finished, no more k-points
-        print >> fout, 'k=', k, n0
+        print >> fout, 'k=', k, 'nrows=', n0, 'nbands=', nb
         heads.append(head)
         # Reciprocal vectors
         Gs = rdVec.fvread2(tape, n0)
@@ -1183,7 +1191,8 @@ class CoreStates:
                     self.l_core[iat].append( lc )
                     self.eig_core[isp][iat].append( t_ec )  # *0.5 Ry2Hartree
                     n_sym_kap_ocm[iat].append( (t_n,t_nm,kappa,abs(kappa)*2) )
-                    print >> fout, t_n,t_symb,t_nm, self.occ_inc[iat][iorb], '%2d %1d' % (kappa,lc), t_ec
+                    Ry2H = 0.5  
+                    print >> fout, t_n,t_symb,t_nm, self.occ_inc[iat][iorb], '%2d %1d' % (kappa,lc), t_ec*Ry2H
             if nspin==2:
                 isp=1
                 for iat in range(strc.nat):

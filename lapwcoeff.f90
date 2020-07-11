@@ -41,7 +41,7 @@ subroutine gap2_set_lapwcoef(alm,blm,clm, kl, indgk, iop, ifrot, nvk, &
   real(8), intent(in) :: abcelo(nat,lomax+1,nloat,3)
   real(8), intent(in) :: Vol, pos(3,ndf)
   real(8), intent(in) :: rotloc(nat,3,3)
-  integer, intent(in) :: trotij(ndf,3,3)
+  real(8), intent(in) :: trotij(ndf,3,3)
   integer, intent(in) :: nLO_at(lomax+1,nat), nlo(lomax+1,nat), lapw(nt,nat)
   integer, intent(in) :: nat, nvk, nt, ngk, ng, ndf, nLOmax, lomax, nloat
   !
@@ -112,10 +112,31 @@ subroutine gap2_set_lapwcoef(alm,blm,clm, kl, indgk, iop, ifrot, nvk, &
               al(n,l,iat) = fj(l)/p/rmt2
               bl(n,l,iat) = 0.d0
            endif
-           !write(6,'(A,I4,1x,A,I2,1x,A,I3,1x,A,F16.8,1x,A,F16.8,1x,A,2F16.8)') 'n=', n, 'iat=', iat, 'l=', l, 'al=', al(n,l,iat), 'bl=', bl(n,l,iat), 'fj=', fj, dfj           
+           !if (ldbg) write(6,'(A,I4,1x,A,I2,1x,A,I3,1x,A,F16.8,1x,A,F16.8,1x,A,2F16.8)') 'n=', n, 'iat=', iat, 'l=', l, 'al=', al(n,l,iat), 'bl=', bl(n,l,iat), 'fj=', fj, dfj
+           !if (ldbg) write(6,'(A,I4,1x,A,I2,1x)') 'n=', n, 'iat=', iat
+           !if (ldbg) write(6,'(A,I4,1x,A,I2,1x,A,I3,1x)') 'n=', n, 'iat=', iat, 'l=', l
+           !if (ldbg) write(6,'(A,I4,1x,A,I2,1x,A,I3,1x,A,F16.8)') 'n=', n, 'iat=', iat, 'l=', l, 'al=', al(n,l,iat)
+           !if (ldbg) write(6,'(A,I4,1x,A,I2,1x,A,I3,1x,A,F16.8,1x,A,F16.8,1x)') 'n=', n, 'iat=', iat, 'l=', l, 'al=', al(n,l,iat), 'bl=', bl(n,l,iat)
+           if (ldbg) write(6,'(A,I4,1x,A,I2,1x,A,I3,1x,A,F16.8,1x,A,F16.8,1x,A)') 'n=', n, 'iat=', iat, 'l=', l, 'al=', al(n,l,iat), 'bl=', bl(n,l,iat), 'fj='
+           !if (ldbg) write(6,'(A,I4,1x,A,I2,1x,A,I3,1x,A,F16.8,1x,A,F16.8,1x,A,F16.8)') 'n=', n, 'iat=', iat, 'l=', l, 'al=', al(n,l,iat), 'bl=', bl(n,l,iat), 'fj=', fj
+           !if (ldbg) write(6,'(A,I4,1x,A,I2,1x,A,I3,1x,A,F16.8,1x,A,F16.8,1x,A,8F16.8)') 'n=', n, 'iat=', iat, 'l=', l, 'al=', al(n,l,iat), 'bl=', bl(n,l,iat), 'fj=', fj(:4), dfj(:4)
         enddo
      enddo
   enddo
+
+  if (ldbg) then
+     print *, 'kvec=', kl
+     print *, 'pos=', pos
+     idf = 0
+     do iat = 1, nat
+        print *, 'rotloc=', rotloc(iat,:,:)
+        do ieq = 1, mult(iat)
+           idf = idf + 1
+           print *, 'rotij =', transpose(trotij(idf,:,:))
+        end do
+     end do
+  end if
+  
   alm=0.d0
   blm=0.d0
   clm=0.d0
@@ -136,7 +157,7 @@ subroutine gap2_set_lapwcoef(alm,blm,clm, kl, indgk, iop, ifrot, nvk, &
            else
               call ylm(yl(1,ig),vec,nt)
            endif
-           if (ldbg) write(6,'(3I3,1x,F12.8,3x,2F12.8,3x,3F12.8,3x,6F10.6)') igvec(:), arg, phs(ig), kpg(:,ig), yl(:3,ig)
+           if (ldbg) write(6,'(3I3,1x,F12.8,3x,2F12.8,3x,3F12.8,3x,6F10.6)') igvec(:), arg/two_pi, phs(ig), kpg(:,ig), yl(:3,ig)
         enddo
         cil = (1.0d+0,0.0d+0)
         ilm = 0
@@ -189,6 +210,14 @@ subroutine gap2_set_lapwcoef(alm,blm,clm, kl, indgk, iop, ifrot, nvk, &
      enddo ! ieq 
   enddo !iat
   deallocate(al,bl,yl,phs,kpg)
+  !write(6,*) 'almblm', 'kl=', kl
+  !do idf=1,ndf
+  !   do ig=1,ngk
+  !      do ilm=1,(lmax+1)**2
+  !         write(6,'(A,I2,1x,A,I2,1x,A,I3,1x,A,I3,1x,A,2F14.9,1x,A,2F14.9)') 'irk=', 0, 'idf=', idf, 'i=', ig, 'j=', ilm, 'alm=', alm(ig,ilm,idf), 'blm=', blm(ig,ilm,idf)
+  !      end do
+  !   end do
+  !enddo
   return
 end subroutine gap2_set_lapwcoef
 
@@ -235,7 +264,7 @@ subroutine dmft1_set_lapwcoef(alm,blm,clm, debug, iop, ifrot, kl, kirr,timat_ik,
   real(8), intent(in) :: abcelo(nat,lomax+1,nloat,3)
   real(8), intent(in) :: Vol, pos(3,ndf)
   real(8), intent(in) :: rotloc(nat,3,3)
-  integer, intent(in) :: trotij(ndf,3,3)
+  real(8), intent(in) :: trotij(ndf,3,3)
   integer, intent(in) :: nLO_at(lomax+1,nat), nlo(lomax+1,nat), lapw(nt,nat)
   integer, intent(in) :: timat_ik(3,3)
   real(8), intent(in) :: tau_ik(3), tauij(ndf,3)

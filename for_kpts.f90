@@ -115,6 +115,7 @@ subroutine ngq_sort(indgq, indgqlen, G_unique, q_c, k_c, maxlen_coul, ngqlen, ma
            n = n + 1            ! n == ngq_barc(iq)
            Gpq_len(n) = akq     ! remember the length of this vector, so that we can sort them below
            which_ik(n) = ik     ! remember which G is this
+           !write(6,'(A,3F12.6,2x,3F12.6,2x,F14.8,3x,2I4)') 'G,q=', k_c(ik,:), q_c(iq,:), akq, n, ik
         endif
      end do
      indxc=0

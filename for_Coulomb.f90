@@ -375,6 +375,7 @@ subroutine Mixed_Coulomb(vtemp, vq, iat, Q_Vq, jlam, gindex, indgq, gqlen, gqlen
      rotation  = matmul( rotloc(iat,:,:), rotation1 )
      do ig=1,ngq_barc
         Gq = matmul(rotation, vq(:) + gindex(indgq(ig)+1, :) )
+        !write(6,'(A,I3,1x,A,I4,1x,A,3F10.6)') 'idf=', idf, 'ig=', ig, 'G+q=', Gq(:)
         call ylm(sph(:,ig), Gq, maxbigl)  ! Spherical harmonics on this atom, properly rotated to the global coordinate system
      enddo
      do irm = 1, nmix                           ! Loop over all atomic product functions on this atom
