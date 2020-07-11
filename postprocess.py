@@ -97,7 +97,9 @@ class SCGW0:
         # Now we change the band energies so that EF=0
         self.Ebnd -= EF
         if len(core.corind)>0:
-            nsp,nat,nc = shape(core.eig_core)
+            nsp = len(core.eig_core)       # bug jul.7 2020                                                                                                          
+            nat = len(core.eig_core[0])    # bug jul.7 2020                                                                                                          
+            #nsp,nat,nc = shape(core.eig_core)
             for isp in range(nsp):
                 for iat in range(nat):
                     core.eig_core[isp][iat][:] = array(core.eig_core[isp][iat][:])*Ry2H - EF
