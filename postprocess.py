@@ -235,8 +235,8 @@ class SCGW0:
             
             mix = io.mix_sc
             for isc in range(io.nmax_sc):
-                bands[:,nst:nend] = copy(eqp[:,:])
-                #bands[:,:nbnd] = bands[:,:nbnd]*(1-mix) + eqp[:,:]*mix
+                #bands[:,nst:nend] = copy(eqp[:,:])
+                bands[:,nst:nend] = bands[:,nst:nend]*(1-mix) + copy(eqp[:,:])*mix
                 
                 if (nomax < numin): # insulating
                     Egk_new = copy(bands[:,numin]-bands[:,nomax])
