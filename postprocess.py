@@ -472,7 +472,7 @@ if __name__ == '__main__':
     latgen.Symoper(strc, io.out)
     
     kqm = KQmesh(io.nkdivs, io.k0shift, strc, latgen, io.out)
-    kqm.tetra(latgen, io.out)
+    kqm.tetra(latgen, strc, io.out)
     core = w2k.CoreStates(io.case, strc, io.nspin, io.out)
     io_data={ 'emax_pol': io.emax_pol, 'emax_sc':  io.emax_sc, 'iop_core': io.iop_core, 'efermi': io.efermi, 'ibgw': io.ibgw, 'nbgw': io.nbgw, 'emingw': io.emingw, 'emaxgw': io.emaxgw, 'ibgw':io.ibgw, 'emingw':io.emingw, 'emaxgw':io.emaxgw}
     ansp = SCGW0(io)
