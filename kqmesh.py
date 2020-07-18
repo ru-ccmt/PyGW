@@ -42,8 +42,7 @@ class KQmesh:
         print >> fout, 'Transformation from semi-cartesian to cartesian (k2cartes)='
         for i in range(3):
             print >> fout, ('%8.5f '*3) % tuple(self.k2cartes[i,:])
-       
-        
+
         nkp = nkdivs[0]*nkdivs[1]*nkdivs[2]
         self.sym = []
         for isym in range(strc.Nsym):
@@ -85,7 +84,7 @@ class KQmesh:
                     # this is now translated into lattice notation of kk, i.e., (i/N,j/N,k/N). As above iii=(kk-k0shift)/divsh
                     iii_s = (t2 - k0shift[:3])/divsh
                     ks_id = self.k2indx(iii_s)
-                    #print 't1=', t1, 't2=', t2, 'ii_s=', ii_s
+                    #print 'ik=', k_id, 't1=', t1, 't2=', t2, 'iii_s=', iii_s, 'ks_id=', ks_id
                     starr.add(ks_id)
                     if self.kii_ind[ks_id] >= 0:
                         #if kpav[ks_id] != kpav[k_id]:

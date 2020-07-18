@@ -2868,14 +2868,22 @@ class MatrixElements2Band:
                 t_matvv += t4-t3
                 if ncg > 0:
                     #  ( < psi_{ie2}| (-i*\nabla) | u_core>_MT + < u_core | (-i*\nabla) | psi_{ie2}>^*_MT )/2
+                    ic_start=0
                     for iat in range(strc.nat):
+                        if not core.l_core[iat]: # this atom has no core
+                            continue
+                        ic_end = ic_start + len(core.l_core[iat])
                         iul_ucl  = ks.iul_ucl[isp][iat]
                         iudl_ucl = ks.iudl_ucl[isp][iat]
                         iucl_ul  = ks.iucl_ul[isp][iat]
                         iucl_udl = ks.iucl_udl[isp][iat]
                         iulol_ucl = ks.iulol_ucl[isp][iat]
                         iucl_ulol = ks.iucl_ulol[isp][iat]
-                        mmatcv[irk,ie2-mst,:,:] += f_q_0.calcmmatcv(iat+1,ie2+1,core.corind,alfa,beta,gama,iul_ucl,iudl_ucl,iucl_ul,iucl_udl,iulol_ucl,iucl_ulol,in1.nLO_at)
+                        mmatcv[irk,ie2-mst,ic_start:ic_end,:] += f_q_0.calcmmatcv(iat+1,ie2+1,core.corind,alfa,beta,gama,iul_ucl,iudl_ucl,iucl_ul,iucl_udl,iulol_ucl,iucl_ulol,in1.nLO_at)
+                        ic_start = ic_end
+                    if ncg != ic_end:
+                        print 'ERROR : missmatch with core states ic_end='+str(ic_end)+' while ncg='+str(ncg)
+                        sys.exit(1)
                     for icg in range(ncg):
                         p12 = mmatcv[irk,ie2-mst,icg,:]
                         p2 = dot(p12, conj(p12)).real/3.

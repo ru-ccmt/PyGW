@@ -1206,7 +1206,8 @@ class CoreStates:
                         self.eigcore[isp][iat].append( t_ec) # *0.5 Ry2Hartree
             
             nclm_max  = max([ sum([2*lc+1 for lc in self.l_core[iat]]) for iat in range(strc.nat)])
-            l_core_max = max([ max(self.l_core[iat]) for iat in range(strc.nat)])
+            #l_core_max = max([ max(self.l_core[iat]) for iat in range(strc.nat)])
+            l_core_max = max([ max(self.l_core[iat]) if self.l_core[iat] else 0 for iat in range(strc.nat)])
             print >> fout, 'l_core_max=', l_core_max, 'nclm_max=', nclm_max
             
             # self.ul_core[isp][iat][ic][ipt]
