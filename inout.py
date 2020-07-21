@@ -307,7 +307,9 @@ class InOut:
             self.iop_ac  = int(mbd[0][2])
         
         self.iop_esgw0 = 1 # whether shift the Fermi energy during self-consistent GW0
-        self.iop_gw0   = 1 # how the do GW0 self-consistent iteration
+        #self.iop_gw0   = 1 # how the do GW0 self-consistent iteration
+        self.iop_gw0 = int( self.Pars("iop_gw0\s*=\s*(\d)", 1) )
+        
         self.iop_rcf   = 0.8 # real-frequency cutoff for using conventional pade
         self.npar_ac=2*self.npol_ac
         if self.nomeg < self.npar_ac:

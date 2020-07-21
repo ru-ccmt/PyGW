@@ -144,29 +144,52 @@ class SCGW0:
         nirkp = len(kqm.weight)
         Nallkp = len(kqm.qlist)*nirkp
         
-        ikas,ikae,sendcounts,displacements = mpiSplitArray(mrank, msize, Nallkp )
-        print >> fout, 'processor rank=', mrank, 'will do', range(ikas,ikae)
-        
-        ik0 = ikas % nirkp
-        iq0 = ikas / nirkp
-        mwm = load(ddir+'/mwm.'+str(iq0)+'.'+str(ik0)+'.npy')
-        (nom, nb1, nb2) = shape(mwm)
-        
-        t_read, t_cmp = 0.0, 0.0
-        
-        sigc = zeros( (nirkp, nb1, len(self.omega) ), dtype=complex )
-        
-        for i in range(ikas,ikae):
-            irk = i % nirkp
-            iq  = i / nirkp
-            t1 = timer()
-            mwm = load(ddir+'/mwm.'+str(iq)+'.'+str(irk)+'.npy')
-            t2 = timer()
-            sigc[irk,:,:] += Compute_selfc_inside(iq, irk, bands, mwm, self.fr, kqm, self.ncg_c, core, self.Ul, fout, PRINT)
-            t3 = timer()
-            t_read += t2-t1
-            t_cmp  += t3-t2
+        if False:
+            ikas,ikae,sendcounts,displacements = mpiSplitArray(mrank, msize, Nallkp )
+            print >> fout, 'processor rank=', mrank, 'will do', range(ikas,ikae)
+            
+            ik0 = ikas % nirkp
+            iq0 = ikas / nirkp
+            mwm = load(ddir+'/mwm.'+str(iq0)+'.'+str(ik0)+'.npy')
+            (nom, nb1, nb2) = shape(mwm)
+            t_read, t_cmp = 0.0, 0.0
+            sigc = zeros( (nirkp, nb1, len(self.omega) ), dtype=complex )
+            
+            for i in range(ikas,ikae):
+                irk = i % nirkp
+                iq  = i / nirkp
+                t1 = timer()
+                mwm = load(ddir+'/mwm.'+str(iq)+'.'+str(irk)+'.npy')
+                t2 = timer()
+                sigc[irk,:,:] += Compute_selfc_inside(iq, irk, bands, mwm, self.fr, kqm, self.ncg_c, core, self.Ul, fout, PRINT)
+                t3 = timer()
+                t_read += t2-t1
+                t_cmp  += t3-t2
+        else:
+            iqs,iqe,sendcounts,displacements = mpiSplitArray(mrank, msize, len(kqm.qlist) )
+            mwm = load(ddir+'/mwm.0.0.npy')
+            (nom, nb1, nb2) = shape(mwm)
+            t_read, t_cmp = 0.0, 0.0
+            sigc = zeros( (nirkp, nb1, len(self.omega) ), dtype=complex )
+            
+            for iq in range(iqs,iqe):
+                dsigc = zeros( (nirkp, nb1, len(self.omega) ), dtype=complex )
+                for irk in range(nirkp):
+                    t1 = timer()
+                    mwm = load(ddir+'/mwm.'+str(iq)+'.'+str(irk)+'.npy')
+                    t2 = timer()
+                    dsigc[irk,:,:] += Compute_selfc_inside(iq, irk, bands, mwm, self.fr, kqm, self.ncg_c, core, self.Ul, fout, PRINT)
+                    t3 = timer()
+                    t_read += t2-t1
+                    t_cmp  += t3-t2
 
+                    for ie1 in range(nb1):
+                        #for iom in range(len(self.omega)):
+                        iom=0
+                        print >> fout, 'dSigc[iq=%3d,irk=%3d,ie=%3d,iom=%3d]=%16.12f%16.12f' % (iq,irk,ie1+self.ibgw,iom,dsigc[irk,ie1,iom].real,dsigc[irk,ie1,iom].imag)
+                
+                sigc += dsigc
+            
         print >> fout, '## Compute_selfc : t_read    =%10.5f' % (t_read,)
         print >> fout, '## Compute_selfc : t_compute =%10.5f' % (t_cmp,)
 
@@ -177,7 +200,7 @@ class SCGW0:
             for irk in range(nirkp):
                 for ie1 in range(nb1):
                     for iom in range(nom):
-                        print >> fout, 'Sigc[irk=%3d,ie=%3d,iom=%3d]=%16.12f%16.12f' % (irk+1, ie1+1, iom+1, sigc[irk,ie1,iom].real, sigc[irk,ie1,iom].imag)                
+                        print >> fout, ' Sigc[irk=%3d,ie=%3d,iom=%3d]=%16.12f%16.12f' % (irk, ie1+self.ibgw, iom, sigc[irk,ie1,iom].real, sigc[irk,ie1,iom].imag)                
         return sigc
     
     def calceqp(self, io, strc, kqm, nval, fout):
@@ -235,9 +258,10 @@ class SCGW0:
             
             mix = io.mix_sc
             for isc in range(io.nmax_sc):
-                #bands[:,nst:nend] = copy(eqp[:,:])
-                bands[:,nst:nend] = bands[:,nst:nend]*(1-mix) + copy(eqp[:,:])*mix
-                
+                bands[:,nst:nend] = copy(eqp[:,:])
+                #bands[:,nst:nend] = bands[:,nst:nend]*(1-mix) + copy(eqp[:,:])*mix
+                #bands = copy(self.Ebnd[isp])
+
                 if (nomax < numin): # insulating
                     Egk_new = copy(bands[:,numin]-bands[:,nomax])
                 else:
@@ -248,16 +272,20 @@ class SCGW0:
                 print >> fout, '#scgw: isc=', isc, 'ediff=', ediff, 'Egk=', (Egk*H2eV).tolist()
                 #print  '#scgw: isc=', isc, 'ediff=', ediff, 'Egk=', Egk.tolist()
                 io.out.flush()
-                if ediff < io.eps_sc: break
+                if ediff < io.eps_sc and isc>0: break
 
                 # Recompute correlation self-energy using quasiparticle's green's function
-                sigc = self.Compute_selfc(bands, core, kqm, fout, False)
+                sigc = self.Compute_selfc(bands, core, kqm, fout, True)
+                # mixing self-energy
+                #self.sigc = self.sigc*(1-mix) + mix*sigc
+                self.sigc = sigc
                 
                 # Compute the new quasiparticle energies
-                (eqp, eqp_im) = Compute_quasiparticles(bands[:,nst:nend], self.Ebnd[isp][:,nst:nend], sigc, self.sigx, self.Vxct[:,nst:nend,nst:nend], self.omega, (io.iop_ac,-1,io.iop_gw0,io.npar_ac,io.iop_rcf), isp, fout, PRINT=False)
+                (eqp, eqp_im) = Compute_quasiparticles(bands[:,nst:nend], self.Ebnd[isp][:,nst:nend], self.sigc, self.sigx, self.Vxct[:,nst:nend,nst:nend], self.omega, (io.iop_ac,-1,io.iop_gw0,io.npar_ac,io.iop_rcf), isp, fout, PRINT=True)
                 
                 # and recompute the Fermi energy on this quasiparticle bands
-                (EF, Eg, evbm, ecbm, eDos) = calc_Fermi(eqp, kqm.atet, kqm.wtet, core.nval, io.nspin)
+                (EF, Eg, evbm, ecbm, eDos) = calc_Fermi(eqp, kqm.atet, kqm.wtet, core.nval-self.ibgw*2, io.nspin)
+                
                 print >> fout, ':E_FERMI_QP(eV)=  %12.4f' % (EF*H2eV,)
                 if io.iop_esgw0 == 1:
                     eqp -= EF # shift bands so that EF=0
