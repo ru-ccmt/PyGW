@@ -258,10 +258,22 @@ class SCGW0:
             
             mix = io.mix_sc
             for isc in range(io.nmax_sc):
+                # update_bande
+                de_vb = sum(eqp[:,nst]-bands[:,nst])/shape(bands)[0] # energy shift of the first calculated band
+                bands[:,:nst] = bands[:,:nst] + de_vb                # shift semi-core bands so that they do not shift with respect to valence states
                 bands[:,nst:nend] = copy(eqp[:,:])
                 #bands[:,nst:nend] = bands[:,nst:nend]*(1-mix) + copy(eqp[:,:])*mix
-                #bands = copy(self.Ebnd[isp])
-
+                if io.iop_esgw0 == 1 and EF != 0:
+                    bands -= EF # shift bands so that EF=0
+                    if len(core.corind)>0: # also core if available
+                        nsp, nat = len(core.eig_core), len(core.eig_core[0])
+                        for isp in range(nsp):
+                            for iat in range(nat):
+                                core.eig_core[isp][iat][:] += de_vb - EF
+                    EF_qp += EF # remember what shift we applied
+                    EF = 0      # now set EF to zero
+                
+                
                 if (nomax < numin): # insulating
                     Egk_new = copy(bands[:,numin]-bands[:,nomax])
                 else:
@@ -287,10 +299,10 @@ class SCGW0:
                 (EF, Eg, evbm, ecbm, eDos) = calc_Fermi(eqp, kqm.atet, kqm.wtet, core.nval-self.ibgw*2, io.nspin)
                 
                 print >> fout, ':E_FERMI_QP(eV)=  %12.4f' % (EF*H2eV,)
-                if io.iop_esgw0 == 1:
-                    eqp -= EF # shift bands so that EF=0
-                    EF_qp += EF # remember what shift we applied
-                    EF = 0      # now set EF to zero
+                #if io.iop_esgw0 == 1:
+                #    eqp -= EF # shift bands so that EF=0
+                #    EF_qp += EF # remember what shift we applied
+                #    EF = 0      # now set EF to zero
                 if Eg > 0:
                     print >> fout, ':BandGap_QP(eV)=  %12.4f' % (Eg*H2eV,)
                 else:

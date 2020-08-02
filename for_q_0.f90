@@ -613,6 +613,11 @@ subroutine calcmmatcv(mcv, iat, iv, corind, alfa,beta,gama, iul_ucl,iudl_ucl,iuc
      pxpy = flm4 * xpy1 + flm3 * xpy2
      pxmy = flm2 * xmy1 + flm1 * xmy2
      pz   = flm6 * z1   + flm5 * z2 
+     !
+     !write(6,'(A,2F14.10,1x,A,2F14.10,1x,A,2F14.10)') 'a=', alfa(iv,l1mm1,idf), 'b=', beta(iv,l1mm1,idf), 'iucl2=', iucl_ul(2,ic), iucl_udl(2,ic)
+     !do ilo=1,nLO_at(l+1,iat) 
+     !   write(6,'(A,2F14.10,1x,A,F14.10)') 'c=', gama(iv,ilo,l1mm1,idf), 'iucl2=', iucl_ulol(2,ilo,ic)
+     !enddo
      !write(6,'(A,4I3,6F16.12,A,6F16.12)') 'xpy2,xmy2,z2', icg, ic, l, m, xpy2, xmy2, z2, ' : ', pxpy, pxmy, pz
      !
      mxcv = -(pxpy+pxmy)*imag/2.d0

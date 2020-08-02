@@ -1295,6 +1295,27 @@ subroutine calc_minc2(mmat,kmql,cstart,cend, mstart,mend,alfp,betp,gamp,s3r,cori
   logical, parameter   :: EXPECTED_WRONG_BUT_EQUAL_TO_PYGAP = .False.
   integer, allocatable :: locmixind3(:,:)
   !
+  if (.False.) then
+     idf = 0
+     do iat=1,nat
+        do ieq=1,mult(iat)
+           idf = idf + 1
+           do l2=0,lomax
+              do m2=-l2,l2
+                 lm1 = l2*l2+l2+m2+1
+                 do ilo1=1,nLO_at(l2+1,iat)
+                    do ie2 = mstart+1,mend
+                       if (abs(gamp(ie2,ilo1,lm1,idf)) > 1e-8 ) then
+                          write(6,'(A,1x,4I4,2x,2F16.10)') 'gxmp:', idf, lm1, ilo1, ie2, gamp(ie2,ilo1,lm1,idf)
+                       endif
+                    enddo
+                 enddo
+              enddo
+           enddo
+        enddo
+     enddo
+  endif
+
   allocate( locmixind3(max_nmix,ndf) )
   locmixind3(:,:) = 0
   
@@ -1329,10 +1350,12 @@ subroutine calc_minc2(mmat,kmql,cstart,cend, mstart,mend,alfp,betp,gamp,s3r,cori
      do irm = 1, nmix(iat)                        !! Loop over product functions
         lb = big_l(irm,iat)                       ! L of the product function
         im0 = locmixind3(irm,idf)
+        !write(6,'(A,I4,2x,A,I4,2x,A,I4,2x,A,I4,2x,A,I4,2x,A,I4)') 'locmixind3: icg=', icg, 'irm=', irm, 'idf=', idf, 'lb=', lb, 'im0=', im0, 'nmix=', nmix(iat)
         do mb = -lb,lb                            ! M of the product function
            im = im0 + lb + mb + 1
            l1min = iabs(lb-l2)        ! l1 is bounded by triangular rule of <Y_{l2m2}|Y_{l1,m1}|Y_{lb,mb}>
            l1max = min(lb+l2,lmax)
+           !write(6,'(A,I4,1x,A,I4,1x,A,I4,1x,A,I4,1x,A,I4,1x,A,I4,1x)') 'im=', im, 'im0=', im0, 'lb=', lb, 'mb=', mb, 'l1min=', l1min, 'l1max=', l1max
            do l1 = l1min,l1max           ! loop over l1
               la1 = l1 + ncore(iat) + 1  ! index of the valence state u_{l1}
               lb1 = la1 + lmax + 1       ! index of the valence state udot_{l1} 
@@ -1347,15 +1370,16 @@ subroutine calc_minc2(mmat,kmql,cstart,cend, mstart,mend,alfp,betp,gamp,s3r,cori
               endif
               if ( abs(m1).gt.l1) cycle 
               lm1 = l1*l1 + l1 + m1 + 1                   ! index for Y_{l1,m1}
-              
               if ( abs(angint) < 1.0d-8) cycle
               phs_angint = phs*angint
               !<Product_Basis| psi_{icore} psi_{i2,k-q}^* >
               aa =  phs_angint * s3r(irm,ic,la1,iat) ! aa = <u_{irm,lb}| uc_{a1,l2}    u_{a1,l1}> <Y_{lb,mb}|Y_{l2,m2} Y*_{l1,m1}>*e^{i(k-q)R}
               bb =  phs_angint * s3r(irm,ic,lb1,iat) ! bb = <u_{irm,lb}| uc_{a1,l2} udot_{a1,l1}> <Y_{lb,mb}|Y_{l2,m2} Y*_{l1,m1}>*e^{i(k-q)R}
+              !write(6,'(A,7I3,2x,2F16.10,2x,6I3,3F16.10)') 's3r ', im, irm, ic, iat, idf, la1, lb1, s3r(irm,ic,la1,iat), s3r(irm,ic,lb1,iat), l1, m1, l2, m2, lb, mb, angint, phs
               do ilo1 = 1,nLO_at(l1+1,iat)
                  lc1 = lc10 + ilo1
                  cc(ilo1) = phs_angint * s3r(irm,ic,lc1,iat) ! cc = <u_{irm,lb}| uc_{a1,l2} ulo_{a1,l1}> <Y_{lb,mb}|Y_{l2,m2} Y*_{l1,m1}>*e^{i(k-q)R}
+                 !write(6,'(A,6I3,2x,F16.10)') 's4r ', im, irm, ic, iat, idf, lc1, s3r(irm,ic,lc1,iat)
               enddo
               do ie2 = 1,mend-mstart
                  ie2p = ie2+mstart
@@ -1372,15 +1396,17 @@ subroutine calc_minc2(mmat,kmql,cstart,cend, mstart,mend,alfp,betp,gamp,s3r,cori
   !$OMP END PARALLEL DO
   deallocate( locmixind3 )
   if (.False.) then
-     print *, 'calc_minc2'
+     print *, 'calc_minc2_eps'
      do im=1,loctmatsize
         do ie2=1,mend-mstart
            do icg=1,cend-cstart
-              write(6,'(I3,1x,I3,1x,I3,1x,2F14.10)') im, ie2+mstart, icg+cstart, mmat(icg,ie2,im)  ! icg==ie2
+              if (abs(mmat(icg,ie2,im)) > 1e-8) then
+                 write(6,'(I3,1x,I3,1x,I3,1x,2F14.10)') im, ie2+mstart, icg+cstart, mmat(icg,ie2,im)  ! icg==ie2
+              endif
            enddo
         enddo
      enddo
-     print *, 'calc_minc2_end'
+     print *, 'calc_minc2_eps_end'
   endif
 end subroutine calc_minc2
 

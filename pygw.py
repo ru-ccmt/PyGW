@@ -1736,51 +1736,6 @@ class Kweights:
         #for ik in range(ankp):
         #    print >> fout, '%3d %10.6f' % (ik, kwt_bz[ik])
     
-#def ImproveDegEigenvectors(eigvals, sgi):
-#    smalle = 1e-10
-#    N = len(eigvals)
-#    its=0
-#    while its < N:
-#        ite =  its+1
-#        while (ite<N and abs(eigvals[ite]-eigvals[its])<smalle): ite += 1 # looping through almost equal eigenvalues
-#        # In case of exactly two equal eigenvalues, we can make many entries exactly vanish. We will find the best linear combination of the two
-#        # eigenvectors, such that most entries in one eigenvector are zero
-#        if (ite-its == 2 ):
-#            #print 'deg=', its,ite, eigvals[its:ite]
-#            rt = [sgi[i,(its+1)]/sgi[i,its] if abs(sgi[i,its])>1e-50 else rand() for i in range(N)]
-#            #rt = sgi[:,(its+1)]/sgi[:,its] # ratio between all components of the two eigenvectors
-#            indx = numpy.argsort(rt)       # sort all ratio components
-#            #print 'sorted=', [rt[indx[i]] for i in range(len(indx))]
-#            # find which ratio occurs most often, i.e., has largest degeneracy in ratio vector
-#            max_deg=1
-#            max_pair=()
-#            jts = 0
-#            while jts < N:
-#                jte = jts+1
-#                while (jte < N and abs(rt[indx[jte]]-rt[indx[jts]])<1e-6 ): jte += 1 # loop over all components of the eigenvector, which have degenerate ratio
-#                if (jte-jts > max_deg): 
-#                    max_deg = jte-jts   # this is the largest degeneracy up to now, with max_deg components degenrate
-#                    #print 'num=', jte-jts, jts,jte, [rt[indx[j]] for j in range(jts,jte)]
-#                    max_pair = (jts,jte)
-#                jts=jte
-#            #print 'max_pair=', max_pair, sorted([indx[i] for i in range(max_pair[0],max_pair[1])])
-#            if max_pair: # we found degeneracy, and is saved in max_pair. Degenrate components are: sorted([indx[i] for i in range(max_pair[0],max_pair[1])])
-#                r = rt[indx[max_pair[0]]] # this is the ratio of all those degenrate components
-#                a, b = r/sqrt(1+r**2), 1.0/sqrt(1+r**2) # coefficients of the linear combination
-#                #print 'r=', r, 'a=', a, 'b=', b
-#                vits=  b*sgi[:,its] + a*sgi[:,its+1]
-#                vit = -a*sgi[:,its] + b*sgi[:,its+1]
-#                #print 'old[it] =', ('%10.6f '*N) % tuple(sgi[:,its+1].real)
-#                #print 'old[its]=', ('%10.6f '*N) % tuple(sgi[:,its].real)
-#                #print 'new[it] =', ('%10.6f '*N) % tuple(vit.real)
-#                #print 'new[its]=', ('%10.6f '*N) % tuple(vits.real)
-#                #print 'orthogonality=', [dot(vits,vits), dot(vits,vit), dot(vit,vits), dot(vit,vit)]
-#                sgi[:,its]   = vits
-#                sgi[:,its+1] = vit
-#        its = ite
-#    return sgi
-
-    
 class MatrixElements2Band:
     DEBUG = False
     def __init__(self, io, pw, strc, latgen):
@@ -2598,10 +2553,11 @@ class MatrixElements2Band:
             alm,blm,clm = lapwc.dmft1_set_lapwcoef(False, 2, True, kjl, kjrr,timat_ik,tau_ik, ks.indgkir[jrk], ks.nv[jrk], pw.gindex, radf.abcelo[isp], strc.rmt, strc.vpos, strc.mult, radf.umt[isp], strc.rotloc, latgen.trotij, latgen.tauij, latgen.Vol, kqm.k2cartes, in1.nLO_at, in1.nlo, in1.lapw, in1.nlomax)
         else:
             alm,blm,clm = lapwc.gap2_set_lapwcoef(kjl, ks.indgk[jk], 2, True, ks.nv[jrk], pw.gindex, radf.abcelo[isp], strc.rmt, strc.vpos, strc.mult, radf.umt[isp], strc.rotloc, latgen.trotij, latgen.Vol, kqm.k2cartes, in1.nLO_at, in1.nlo, in1.lapw, in1.nlomax)
-            
+
         (ngj,nLOmax,ntnt,ndf) = shape(clm)
         (ngj,ntnt,ndf) = shape(alm)
         (nbmax,ngj2) = shape(Aeigq)
+
         # And now change alm,blm,clm to band basis, which we call alfa,beta,gama
         alfp = reshape( la.matmul(Aeigq, reshape(alm, (ngj,ntnt*ndf)) ), (nbmax,ntnt,ndf) )
         betp = reshape( la.matmul(Aeigq, reshape(blm, (ngj,ntnt*ndf)) ), (nbmax,ntnt,ndf) )
@@ -2614,6 +2570,31 @@ class MatrixElements2Band:
         Aeigs = (Aeigk,Aeigq)
         
         if False:
+            print 'clm'
+            idf = -1
+            for iat in range(strc.nat):
+                for ieq in range(strc.mult[iat]):
+                    idf = idf + 1
+                    for l2 in range(shape(in1.nlo)[0]):
+                        for m2 in range(-l2,l2+1):
+                            l2m2=l2*l2+l2+m2
+                            for ilo in range(nLOmax): #range(in1.nLO_at[l+1,iat]):
+                                for i in range(ngj):
+                                    if (abs(clm[i,ilo,l2m2,idf]) > 1e-8):
+                                        print 'idf=%2d l2m2=%3d ilo=%2d i=%4d clm=%16.10f%16.10f' % (idf+1, l2m2+1, ilo+1, i+1, clm[i,ilo,l2m2,idf].real, clm[i,ilo,l2m2,idf].imag )
+            print 'gamp', 'nbmax=', nbmax
+            idf = -1
+            for iat in range(strc.nat):
+                for ieq in range(strc.mult[iat]):
+                    idf = idf + 1
+                    for l2 in range(shape(in1.nlo)[0]):
+                        for m2 in range(-l2,l2+1):
+                            l2m2=l2*l2+l2+m2
+                            for ilo in range(nLOmax): #range(in1.nLO_at[l+1,iat]):
+                                for ie2 in range(nbmax):
+                                    if (abs(gamp[ie2,ilo,l2m2,idf]) > 1e-8 ):
+                                        print 'gamp: %4d%4d%4d%4d  %16.10f%16.10f' % (idf+1,l2m2+1,ilo+1,ie2+1, gamp[ie2,ilo,l2m2,idf].real, gamp[ie2,ilo,l2m2,idf].imag)
+        if False:
             print 'alfa,beta,gama='
             for ie in range(shape(alfa)[0]):
                 for lm in range(shape(alfa)[1]):
@@ -2622,7 +2603,8 @@ class MatrixElements2Band:
             for ie in range(shape(alfp)[0]):
                 for lm in range(shape(alfp)[1]):
                     print 'ie=%3d lm=%3d alfa=%14.10f%14.10f beta=%14.10f%14.10f gama=%14.10f%14.10f' % (ie+1,lm+1,alfp[ie,lm,0].real, alfp[ie,lm,0].imag, betp[ie,lm,0].real, betp[ie,lm,0].imag, gamp[ie,0,lm,0].real, gamp[ie,0,lm,0].imag)
-
+            
+                    
         t1 = timer()
         t_times[0] += t1-t0
 
@@ -2656,6 +2638,7 @@ class MatrixElements2Band:
             else:
                 # computing <Product_Basis| psi_{icore} psi_{i2,k-q}^* > with i2=[mst,mend] and icore=[cst,cent], where i2 is empty
                 mmat_c = fvxcn.calc_minc2(kjl,cst,cend,mst,mend,alfp,betp,gamp,s3r,core.corind,strc.vpos,strc.mult,nmix,big_l,in1.nLO_at,pb.ncore,pb.cgcoef,in1.lmax,self.loctmatsize)
+                
             t2 = timer()
             # Now compute also
             minc = la.matmul( mmat_c, conj(self.barcvm[:self.loctmatsize,:]) )
@@ -2663,14 +2646,29 @@ class MatrixElements2Band:
             t3 = timer()
             t_times[3] += t2-t1
             t_times[4] += t3-t2
-            #if mode == 'polarization':
-            #    print 'time=', t2-t1
-            #    for im in range(self.loctmatsize):
-            #        for ic in range(cend-cst):
-            #            for ie2 in range(mend-mst):
-            #                print '%4d %4d %4d %20.14f %20.14f' % (im, ic, ie2, mmat_c[ic,ie2,im].real, mmat_c[ic,ie2,im].imag)
-            #    
-            #    sys.exit(0)
+            
+            if False and mode == 'polarization':
+                (nb1,nb2,ngq) = shape(mmat_it)
+                print 'mmat='
+                for im in range(self.loctmatsize):
+                    for ie1 in range(nend-nst):
+                        for ie2 in range(mend-mst):
+                            if abs(mmat_mt[ie1,ie2,im]) > 1e-8:
+                                print '%4d %4d %4d %20.14f %20.14f' % (im+1, ie1+nst+1, ie2+mst+1, mmat_mt[ie1,ie2,im].real, mmat_mt[ie1,ie2,im].imag)
+                for im in range(ngq):
+                    for ie1 in range(nend-nst):
+                        for ie2 in range(mend-mst):
+                            if abs(mmat_it[ie1,ie2,im]) > 1e-8:
+                                print '%4d %4d %4d %20.14f %20.14f' % (im+self.loctmatsize+1, ie1+nst+1, ie2+mst+1, mmat_it[ie1,ie2,im].real, mmat_mt[ie1,ie2,im].imag)
+                
+                print 'mmat_c'
+                for im in range(self.loctmatsize):
+                    for ic in range(cend-cst):
+                        for ie2 in range(mend-mst):
+                            if (abs(mmat_c[ic,ie2,im]) > 1e-8):
+                                print '%4d %4d %4d %20.14f %20.14f' % (im+1, ic+1, ie2+mst+1, mmat_c[ic,ie2,im].real, mmat_c[ic,ie2,im].imag)
+                print 'mmat_c_end'
+                
             
         #if PRINT: # Conclusion: you will need to check mmat, which is compatible, and can not check minm, because it is not unique
         #    print >> fout, 'mmat=', 'ik=', ik
@@ -2868,29 +2866,33 @@ class MatrixElements2Band:
                 t_matvv += t4-t3
                 if ncg > 0:
                     #  ( < psi_{ie2}| (-i*\nabla) | u_core>_MT + < u_core | (-i*\nabla) | psi_{ie2}>^*_MT )/2
-                    #ic_start=0
+                    ic_start=0
                     for iat in range(strc.nat):
                         if not core.l_core[iat]: # this atom has no core
                             continue
-                        #ic_end = ic_start + len(core.l_core[iat])
+                        ic_end = ic_start + len(core.l_core[iat])
                         iul_ucl  = ks.iul_ucl[isp][iat]
                         iudl_ucl = ks.iudl_ucl[isp][iat]
                         iucl_ul  = ks.iucl_ul[isp][iat]
                         iucl_udl = ks.iucl_udl[isp][iat]
-                        iulol_ucl = ks.iulol_ucl[isp][iat]
-                        iucl_ulol = ks.iucl_ulol[isp][iat]
+                        iulol_ucl = ks.iulol_ucl[isp][iat][:,1:,:]
+                        iucl_ulol = ks.iucl_ulol[isp][iat][:,1:,:]
                         mmcv = f_q_0.calcmmatcv(iat+1,ie2+1,core.corind,alfa,beta,gama,iul_ucl,iudl_ucl,iucl_ul,iucl_udl,iulol_ucl,iucl_ulol,in1.nLO_at)
-                        #print 'shape(mmcv)=', shape(mmcv), 'iat=', iat, 'ic_start=', ic_start, 'ic_end=', ic_end
-                        #mmatcv[irk,ie2-mst,ic_start:ic_end,:] += mmcv
                         mmatcv[irk,ie2-mst,:,:] += mmcv
-                        #ic_start = ic_end
+                        #mmatcv[irk,ie2-mst,ic_start:ic_end,:] += mmcv[ic_start:ic_end,:]
+                        #for ic in range(ic_start,ic_end):
+                        #    print 'mmatcv[irk=%3d,ie2=%3d,iat=%3d,ic=%3d] = %14.9f' % (irk+1, ie2+1, iat+1, ic+1, sum(mmatcv[irk,ie2-mst,ic,:]).real)
+                        ic_start = ic_end
                     #if ncg != ic_end:
                     #    print 'ERROR : missmatch with core states ic_end='+str(ic_end)+' while ncg='+str(ncg)
                     #    sys.exit(1)
+                    
                     for icg in range(ncg):
                         p12 = mmatcv[irk,ie2-mst,icg,:]
                         p2 = dot(p12, conj(p12)).real/3.
                         #print >> fout, '%3d %3d' % (ie2+1, icg+1), ('%16.12f %16.12f  '*3+'  %16.12f') % (p12[0].real, p12[0].imag, p12[1].real, p12[1].imag, p12[2].real, p12[2].imag, p2)
+                        #print 'fmatcv[irk=%3d,ie2=%3d,iat=%3d,ic=%3d] = %14.9f' % (irk+1, ie2+1, iat+1, icg+1, sum(mmatcv[irk,ie2-mst,icg,:]).real)
+                        
                 t5 = timer()
                 t_matcv += t5-t4
         print >> fout, '## cal_head t(ABC coeff)           =%14.9f' % t_coeff
@@ -3014,6 +3016,23 @@ class MatrixElements2Band:
         epsw1 = zeros((matsize,nom_nil), dtype=complex)
         #epsw2 = zeros((matsize,len(fr.omega)), dtype=complex) == conj(epsw1)
         
+        if False:
+            fi = open('fkcw.dat','r')
+            fi.next()
+            for ik,irk in enumerate(kqm.kii_ind):
+                for ib in range(nb1_kcw):
+                    for jb in range(nb2_kcw):
+                        dat = fi.next().split()
+                        _ik_, _ib_, _jb_ = map(int,dat[:3])
+                        _kcw_ = map(float,dat[3:3+16])
+                        if ib+1 != _ib_:
+                            print 'ERROR ib=', ib, '_ib_=', _ib_
+                        if jb+ks.nomax_numin[1]+1 != _jb_:
+                            print 'ERROR jb=', jb+ks.nomax_numin[1], '_jb_=', _jb_
+                        if ik+1 != _ik_:
+                            print 'ERROR ik=', ik, '_ik_=', _ik_
+                        kcw[ib,jb,ik,:16] = _kcw_
+        
         t_times= zeros(10)
         for ik,irk in enumerate(kqm.kii_ind):
             coef = -fspin 
@@ -3044,10 +3063,11 @@ class MatrixElements2Band:
             if False:
                 print >> fout, 'shape(minm)=', shape(minm), 'shape(minc0)=', shape(minc0), 'shape(minm0)=', shape(minm0)
                 print >> fout, 'ik=', ik, 'calceps:minm'
-                for imix in range(matsiz):
-                    for ie1 in range(nb1):
-                        for ie2 in range(nb2):
-                            print >> fout, '%3d %3d %3d %16.12f%16.12f' % (imix+1, ie1+1, ie2+ncbm+1, minm[ie1,ie2,imix].real, minm[ie1,ie2,imix].imag)
+                for ie1 in range(nb1):
+                    for ie2 in range(nb2):
+                        for imix in range(matsiz):
+                            if abs(minm[ie1,ie2,imix]) > 1e-8:
+                                print >> fout, '%3d %3d %3d %16.12f %16.12f' % (imix+1, ie1+1, ie2+ncbm+1, minm[ie1,ie2,imix].real, minm[ie1,ie2,imix].imag)
                 print >> fout, 'calceps:minm_end'
                 
             t10 = timer()
@@ -3064,19 +3084,22 @@ class MatrixElements2Band:
                         edif = enk[ie1] - enk[ie2+ks.ncg_p]
                         if abs(edif) > 1e-10:
                             pm[ie12] = mmc[ie2-ncbm,ie1]/edif
+                        #print 'ic1=%3d ie2=%3d edif=%14.10f pm=%14.10f mcv=%14.10f' % (ie1+1,ie2+1,edif,pm[ie12].real, mmc[ie2-ncbm,ie1].real)
                         ie12 += 1
                 for ie1 in range(nvbm):        # valence-occupied
                     for ie2 in range(ncbm,ks.nbmaxpol): # empty
                         edif = enk[ie1+ks.ncg_p] - enk[ie2+ks.ncg_p]
                         if abs(edif) > 1e-10:
                             pm[ie12] = mmv[ie2-ncbm,ie1]/edif
+                        #print 'ie1=%3d ie2=%3d edif=%14.10f pm=%14.10f mvv=%14.10f' % (ie1+1,ie2+1,edif,pm[ie12].real, mmv[ie2-ncbm,ie1].real)
                         ie12 += 1
                 
                 if False:
-                    print 'ik=', ik+1, 'pm='
+                    print >> fout, 'ik=', ik+1, 'pm='
                     for ie in range(ie12):
-                        print >> fout, '%4d  %18.14f%18.14f' % (ie+1, pm[ie].real, pm[ie].imag)
-                    sys.exit(0)
+                        if abs(pm[ie]) > 1e-8:
+                            print >> fout, '%4d  %18.14f%18.14f' % (ie+1, pm[ie].real, pm[ie].imag)
+                    
             t11 = timer()
             t_times[5] += t11-t10
             
@@ -3085,14 +3108,15 @@ class MatrixElements2Band:
                 print >> fout, 'minm2='
                 for ie12,(ie1,ie2) in enumerate(itertools.product(range(ks.ncg_p+nvbm),range(ks.nbmaxpol-ncbm))):
                     for im in range(matsiz):
-                        print >> fout, ie12, im, minm2[ie12,im]
+                        if abs(minm2[ie12,im]) > 1e-8:
+                            print >> fout, '%5d %5d' % (ie12+1, im+1), '%18.14f %18.14f' % (minm2[ie12,im].real, minm2[ie12,im].imag)
                 sys.exit(0)
                 
             if ForceReal:
                 "This is dangerous: We are truncating minm matrix elements to real components only"
                 print 'Imaginary part of minm=', sum(abs(minm.imag))/(matsiz*nb1*nb2), ' is set to zero!'
                 minm = array(minm.real, dtype=float)
-                
+
             t12 = timer()
             tmat  = zeros( (matsiz,Ndouble_bands), dtype=minm.dtype)
             
@@ -3106,7 +3130,6 @@ class MatrixElements2Band:
             #nvbm, ncbm = ks.nomax_numin[0]+1, ks.nomax_numin[1]
             #kcw = zeros( (ks.ncg+nvbm,ks.nbmaxpol-ncbm,nkp,nom) )
             #kcw[:(ks.ncg_p+nvbm),:(ks.nbmaxpol-ncbm),ik,iom]
-            
             for iom_il in range(nom_nil):
                 t13 = timer()
                 # tmat = < u^{product}_{im} | psi^*_{ie2} psi_{ie1} > F[ie12,om]
@@ -3121,10 +3144,10 @@ class MatrixElements2Band:
                 
                 t15 = timer()
                 if iq==0: 
-                    wtmp = dot(tmat,pm)
-                    epsw1[:,iom_il] += wtmp
-                    #epsw2[:,iom_il] += conj(wtmp)
-                    #print 'ik=%3d  iom=%3d  wtmp^2=%18.14f' % (ik+1,iom+1, sum(abs(wtmp)**2) )
+                    wtmp = dot(tmat,pm)           # wtmp[:matsiz] = tmat[:matsiz,ie12]*pm[ie12]
+                    epsw1[:,iom_il] += wtmp         
+                    #print >> fout, 'ik=%3d  iom=%3d  wtmp^2=%18.14f  epsw1=%18.14f' % (ik+1,iom_il+1, sum(abs(wtmp)**2), sum(abs(epsw1[:,iom_il])**2) )
+                    
                 t16 = timer()
                 t_times[7] += t14-t13
                 t_times[8] += t15-t14
@@ -3166,7 +3189,7 @@ class MatrixElements2Band:
             # above we just computed V*polarization, while epsilon = 1+VP
             eps[:,:,iom] += Id
             
-            if PRINT:
+            if False:
                 eigs = linalg.eigvalsh(eps[:,:,iom])
                 print >> fout, 'iom=%3d  eps Eigenvalues=' % (iom+1,)
                 for i in range(len(eigs)-1,-1,-1):
@@ -3355,7 +3378,12 @@ def Polarization_weights(iq, ks, kqm, core, fr, iop_bzintq, sgnfrq, dUl, fout, i
     for ik in range(ankp):
         irk = kqm.kii_ind[ik]
         enk[ks.ncg_p:(ks.ncg_p+ks.nbmaxpol),ik] = ks.Ebnd[isp,irk,:ks.nbmaxpol]
-    
+
+    if False:
+        nmax=ks.ncg_p+ks.nbmaxpol
+        print >> fout, 'Energies'
+        for ik in range(ankp):
+            print >> fout, '%3d ' % ik, ('%10.6f'*nmax) % tuple(enk[:,ik])
     # iop_bzintq = io.iop_bzintq # could be [-1:precise_numeric_integration,0:analytic_defaul,1:discrete_sum_of_poles_for_testing]
     # sgnfrq = io.fflg
     #omgmax_ht = 4.0   # (only relevant for iop_bzintq==-2) the upper bound for the HT integration
@@ -3382,19 +3410,20 @@ def Polarization_weights(iq, ks, kqm, core, fr, iop_bzintq, sgnfrq, dUl, fout, i
         save('kcw.'+str(iq), kcw)
         
     if False:
-        fl = sorted(glob.glob('kcw.*'))
-        if len(fl)>0:
-            n = int(fl[-1].split('.')[-1])
-        else:
-            n=0
-        fnm = 'kcw.'+str(n+1)
+        #fl = sorted(glob.glob('kcw.*'))
+        #if len(fl)>0:
+        #    n = int(fl[-1].split('.')[-1])
+        #else:
+        #    n=0
+        #fnm = 'kcw.'+str(n+1)
+        fnm = 'kcw.0'
         fo = open(fnm, 'w')
         print >> fo, 'nk=', shape(kcw)[2], 'shape(kcw)=', shape(kcw), 'kcw='
         (nb1,nb2,nkp,nom) = shape(kcw)
         for ik in range(nkp):
             for ib in range(ks.ncg_p+nomx+1):
                 for jb in range(nb2):
-                    print >> fo, '%4d %4d %4d' % (ik+1, ib+1, jb+1), ('%17.13f'*nom) % tuple(kcw[ib,jb,ik,:].real)
+                    print >> fo, '%4d %4d %4d' % (ik+1, ib+1, jb+numin+1), ('%17.13f'*nom) % tuple(kcw[ib,jb,ik,:].real)
         fo.close()
         sys.exit(0)
     
@@ -3607,7 +3636,7 @@ class G0W0:
             # Using tetrahedron method, computes polarization in the band basis (Lindhardt formula), but is integrated over momentum
             print >> fout, '***** iq=', iq
             kcw = Polarization_weights(iq, ks, kqm, wcore, fr, io.iop_bzintq, io.fflg, dUl, fout)
-
+            
             t6 = timer()
             #print >> fout, 'mem-usage[sigx,Polarization_weights(iq='+str(iq)+']=', ps.memory_info().rss*b2MB,'MB'
             
@@ -3636,7 +3665,7 @@ class G0W0:
             t_selfx += t4-t3
             t_calc_eps += t7-t6
             t_calc_sfc += t8-t7
-
+            
         print >> fout, 'q-loop finished'
         fout.flush()
         
