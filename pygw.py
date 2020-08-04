@@ -2875,8 +2875,14 @@ class MatrixElements2Band:
                         iudl_ucl = ks.iudl_ucl[isp][iat]
                         iucl_ul  = ks.iucl_ul[isp][iat]
                         iucl_udl = ks.iucl_udl[isp][iat]
-                        iulol_ucl = ks.iulol_ucl[isp][iat][:,1:,:]
-                        iucl_ulol = ks.iucl_ulol[isp][iat][:,1:,:]
+                        if shape(ks.iulol_ucl[isp][iat])[1] > 1:
+                            iulol_ucl = ks.iulol_ucl[isp][iat][:,1:,:]
+                            iucl_ulol = ks.iucl_ulol[isp][iat][:,1:,:]
+                        else:
+                            # this is just a fix so that we do not give empty array to fortran
+                            iulol_ucl = ks.iulol_ucl[isp][iat]
+                            iucl_ulol = ks.iucl_ulol[isp][iat]
+
                         mmcv = f_q_0.calcmmatcv(iat+1,ie2+1,core.corind,alfa,beta,gama,iul_ucl,iudl_ucl,iucl_ul,iucl_udl,iulol_ucl,iucl_ulol,in1.nLO_at)
                         mmatcv[irk,ie2-mst,:,:] += mmcv
                         #mmatcv[irk,ie2-mst,ic_start:ic_end,:] += mmcv[ic_start:ic_end,:]
