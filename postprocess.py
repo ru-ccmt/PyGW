@@ -289,8 +289,8 @@ class SCGW0:
                 # Recompute correlation self-energy using quasiparticle's green's function
                 sigc = self.Compute_selfc(bands, core, kqm, fout, True)
                 # mixing self-energy
-                #self.sigc = self.sigc*(1-mix) + mix*sigc
-                self.sigc = sigc
+                self.sigc = self.sigc*(1-mix) + mix*sigc
+                #self.sigc = sigc
                 
                 # Compute the new quasiparticle energies
                 (eqp, eqp_im) = Compute_quasiparticles(bands[:,nst:nend], self.Ebnd[isp][:,nst:nend], self.sigc, self.sigx, self.Vxct[:,nst:nend,nst:nend], self.omega, (io.iop_ac,-1,io.iop_gw0,io.npar_ac,io.iop_rcf), isp, fout, PRINT=True)
