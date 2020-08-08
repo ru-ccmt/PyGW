@@ -259,7 +259,10 @@ class SCGW0:
             mix = io.mix_sc
             for isc in range(io.nmax_sc):
                 # update_bande
-                de_vb = sum(eqp[:,nst]-bands[:,nst])/shape(bands)[0] # energy shift of the first calculated band
+                if io.shift_semicore:
+                    de_vb = sum(eqp[:,nst]-bands[:,nst])/shape(bands)[0] # energy shift of the first calculated band
+                else:
+                    de_vb = 0
                 bands[:,:nst] = bands[:,:nst] + de_vb                # shift semi-core bands so that they do not shift with respect to valence states
                 bands[:,nst:nend] = copy(eqp[:,:])
                 #bands[:,nst:nend] = bands[:,nst:nend]*(1-mix) + copy(eqp[:,:])*mix
@@ -281,7 +284,7 @@ class SCGW0:
                 
                 ediff = max(abs(Egk-Egk_new))
                 Egk = Egk_new
-                print >> fout, '#scgw: isc=', isc, 'ediff=', ediff, 'Egk=', (Egk*H2eV).tolist()
+                print >> fout, '#scgw: isc=', isc, 'ediff=', ediff, 'de_vb=', de_vb, 'Egk=', (Egk*H2eV).tolist()
                 #print  '#scgw: isc=', isc, 'ediff=', ediff, 'Egk=', Egk.tolist()
                 io.out.flush()
                 if ediff < io.eps_sc and isc>0: break

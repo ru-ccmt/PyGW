@@ -318,6 +318,9 @@ class InOut:
             print >> self.out, '  I think this iop_gw0 is not specified'
         print >> self.out
 
+        self.shift_semicore = int( self.Pars("shift_semicore\s*=\s*(\d)", 0) )
+        print >> self.out, '\nshift_semicore=', self.shift_semicore
+
         self.iop_rcf   = 0.8 # real-frequency cutoff for using conventional pade
         self.npar_ac=2*self.npol_ac
         if self.nomeg < self.npar_ac:
