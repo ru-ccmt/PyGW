@@ -313,7 +313,7 @@ class SCGW0:
                 print >> fout, 'Fermi: evbm=%12.4f  ecbm=%12.4f ' % (evbm*H2eV, ecbm*H2eV)
                 print >> fout, 'eferqp0=', EF_qp
                 
-            if ediff >= 5e-3:
+            if ediff >= 5e-2:
                 print >> fout, 'WARNING : GW0 did not converge. Will not analyze'
                 return None
             else:
