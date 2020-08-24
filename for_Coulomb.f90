@@ -138,7 +138,8 @@ subroutine Ewald_Summation(sgm, pq, lam_max, pos, br2, rbas, alat, Vol, ortho, r
      enddo ! jdf
   enddo ! idf
   deallocate( ylam, stmp1, stmp2, cm )
-  if(.False.) then 
+  if(.False.) then
+     write(6,*) 'sgm='
      do idf=1,ndf
         do jdf=idf,ndf
            ijdf=idf+jdf*(jdf-1)/2
@@ -146,7 +147,11 @@ subroutine Ewald_Summation(sgm, pq, lam_max, pos, br2, rbas, alat, Vol, ortho, r
               do m=-l,l
                  ilm = l*l + l + m + 1
                  if (abs(sgm(ilm,ijdf)) > 1e-5) then
-                    write(6,'(4i5,2e12.4)') m,l,idf,jdf,sgm(ilm,ijdf)
+                    if (abs(aimag(sgm(ilm,ijdf))) > 1e-10) then
+                       write(6,'(4i5,2e12.4)') m,l,idf,jdf,sgm(ilm,ijdf)
+                    else
+                       write(6,'(4i5,e12.4)') m,l,idf,jdf,dble(sgm(ilm,ijdf))
+                    endif
                  endif
               enddo
            enddo
@@ -250,7 +255,7 @@ subroutine MT_Coulomb(vmat, vq, iat, loctmatsize, big_l, nmix, im_start, tilg, r
                                 dj4 =        getdjmm(jdf, l2,  m4, m2, djmm, ndf, dimdj)    ! rotating Y_{l2,m4} into global coordinate system Y_{l2,m2}.
                                 sum34 = sum34 + minu * stc * tg * dj3 * dj4
                              enddo ! m4
-                          enddo ! m3  
+                          enddo ! m3
                           ! rtlij = < r^L_{im} | u_{im,iat} > * <r^L_{jm}| u_{jm,jat}>
                           ! Vmat = rtlij * Ewald_sum * (-1)^m1 * tildeg(l1,l2,-m1,m2). We also take into account the rotation when global and local axis are not alligned.
                           Vmat(im,jm) = rtlij(jrm,irm,jat,iat) * sum34

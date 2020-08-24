@@ -563,6 +563,17 @@ class ProductBasis:
         C2Sph = array([[ s2, -s2*1j,   0],
                        [ 0,    0,      1],
                        [-s2, -s2*1j,   0]], dtype=complex)
+
+        if Debug_Print:
+            for iat in range(len(strc.mult)):
+                print >> fout, 'iat=', iat, 'rotloc='
+                for i in range(3):
+                    print >> fout, ('%10.6f'*3) % tuple(strc.rotloc[iat][i,:])
+            for idf in range(len(iateq_ind)):
+                print >> fout, 'idf=', idf, 'rotij='
+                for i in range(3):
+                    print >> fout, ('%10.6f'*3) % tuple(latgen_trotij[idf,:,i])
+                
         #  Loop over all atoms
         for idf in range(len(iateq_ind)): # atom index counting all atoms
             iat = iateq_ind[idf]          # atom index counting only equivalent
@@ -570,19 +581,30 @@ class ProductBasis:
             # Calculate the rotation matrix in the cartesian basis
             # rotcart=transpose(rotloc x rotij)
             rotcart = dot(strc.rotloc[iat], latgen_trotij[idf,:,:].T)
-            #print 'rotcart=', rotcart, 'rotloc=', strc.rotloc[iat], 'rotij=', latgen_trotij[idf,:,:].T
+            
             # Transform the rotation matrix to the spherical basis
             rotsph = dot( dot( C2Sph, rotcart), C2Sph.conj().T )
             # Obtain the rotation matrix for j=1 D^1_{m,m')=transpose(rotsph)
-            #print 'rotsph=', rotsph
             
-            #print 'rotsph=', rotsph
+            if Debug_Print:
+                print >> fout, 'rotij='
+                for i in range(3):
+                    print >> fout, ('%10.6f'*3) % tuple(latgen_trotij[idf,:,i])
+                print >> fout, 'rotcart='
+                for i in range(3):
+                    print >> fout, ('%10.6f'*3) % tuple(rotcart[i,:])
+                print >> fout, 'rotsph='
+                for i in range(3):
+                    for j in range(3):
+                        print >> fout, ('%10.6f%10.6f') % (rotsph[i,j].real, rotsph[i,j].imag), ' ',
+                    print >> fout
+                
             for mu in [-1,0,1]:
                 for m in [0,1]:
                     idx = 2*(mu+1)+m+1  # index for l=1
                     self.djmm[idx,idf] = rotsph[m+1,mu+1]
                     if Debug_Print:
-                        print >> fout, ' djmm[idf=%2d,l=%2d,mu=%3d,m=%2d,idx=%4d]=%16.10f %16.10f' % (idf+1,1,mu,m,idx+1,self.djmm[idx,idf].real,self.djmm[idx,idf].imag)
+                        print >> fout, ' djmm[idf=%2d,l=%2d,mu=%3d,m=%3d,idx=%5d]=%16.10f%16.10f' % (idf+1,1,mu,m,idx+1,self.djmm[idx,idf].real,self.djmm[idx,idf].imag)
             #  Obtain the rotation matrix for j> 1 by recursive relation
             for l in range(2,maxbigl+1):
                 sql = sqrt(4*pi*(2*l+1)/(2*l-1.0)/3.)
@@ -611,7 +633,7 @@ class ProductBasis:
                         idx = l*(l+1)*(4*l-1)/6+(l+1)*(mu+l)+m
                         self.djmm[idx,idf] = _djmm_[l+mu,m]*prefac
                         if Debug_Print:
-                            print >> fout, ' djmm[idf=%2d,l=%2d,mu=%3d,m=%2d,idx=%4d]=%16.10f %16.10f' % (idf+1,l,mu,m,idx+1,self.djmm[idx,idf].real,self.djmm[idx,idf].imag)
+                            print >> fout, ' djmm[idf=%2d,l=%2d,mu=%3d,m=%3d,idx=%5d]=%16.10f%16.10f' % (idf+1,l,mu,m,idx+1,self.djmm[idx,idf].real,self.djmm[idx,idf].imag)
 
 
 def Check_Equal_k_lists(klist, kqm, fout):
@@ -996,7 +1018,6 @@ class KohnShamSystem:
         if io_ibgw < 0:
             nocc_at_k = [[len(filter(lambda x: x<io_emingw, self.Ebnd[isp,ik,:])) for ik in range(nkp)] for isp in range(nspin)]# how many bands below io['emingw'] at each k-point
             self.ibgw = min(map(min,nocc_at_k))
-            #print 'ibgw=', self.ibgw,  'nocc_at_k=', nocc_at_k
         else:
             self.ibgw = io_ibgw
         if io_nbgw <= 0:
@@ -1018,7 +1039,7 @@ class KohnShamSystem:
             self.nbgw = nbnd
 
         #print >> fout, ' Index of bands considered in GW calculations: (%d,%d)' %(self.ibgw,self.nbgw), 'in energy range',io_emingw, 'to', io_emaxgw, 'Hartree'
-
+        
         nbandsgw = self.nbgw - self.ibgw
         nvelgw = core.nval - 2*self.ibgw
         print >> fout, ' Nr. of bands (nbmax)               :', nbnd
@@ -1182,29 +1203,33 @@ class KohnShamSystem:
             for isp in range(nspin):
                 for iat in range(strc.nat):
                     for ic,lc in enumerate(core.l_core[iat]):
-                        print >> fout, 'iul1ucl (%2d,%2d)=%10.7f' %(iat,ic,self.iul_ucl [isp][iat][0,ic])
-                        print >> fout, 'iudl1ucl(%2d,%2d)=%10.7f' %(iat,ic,self.iudl_ucl[isp][iat][0,ic])
-                        print >> fout, 'iucl1ul (%2d,%2d)=%10.7f' %(iat,ic,self.iucl_ul [isp][iat][0,ic])
-                        print >> fout, 'iucl1udl(%2d,%2d)=%10.7f' %(iat,ic,self.iucl_udl[isp][iat][0,ic])
+                        print >> fout, 'nLO_at_ind[l+1,iat]=', in1.nLO_at_ind[iat][lc+1]
+                        if lc>0 : print >> fout, 'nLO_at_ind[l-1,iat]=', in1.nLO_at_ind[iat][lc-1]
+                        
+                        print >> fout, 'iul1ucl [%2d,%2d]=%10.7f' %(iat,ic,self.iul_ucl [isp][iat][0,ic])
+                        print >> fout, 'iudl1ucl[%2d,%2d]=%10.7f' %(iat,ic,self.iudl_ucl[isp][iat][0,ic])
+                        print >> fout, 'iucl1ul [%2d,%2d]=%10.7f' %(iat,ic,self.iucl_ul [isp][iat][0,ic])
+                        print >> fout, 'iucl1udl[%2d,%2d]=%10.7f' %(iat,ic,self.iucl_udl[isp][iat][0,ic])
                         #     
-                        print >> fout, 'iulucl1 (%2d,%2d)=%10.7f' %(iat,ic,self.iul_ucl [isp][iat][1,ic])
-                        print >> fout, 'iudlucl1(%2d,%2d)=%10.7f' %(iat,ic,self.iudl_ucl[isp][iat][1,ic])
-                        print >> fout, 'iuclul1 (%2d,%2d)=%10.7f' %(iat,ic,self.iucl_ul [isp][iat][1,ic])
-                        print >> fout, 'iucludl1(%2d,%2d)=%10.7f' %(iat,ic,self.iucl_udl[isp][iat][1,ic])
+                        print >> fout, 'iulucl1 [%2d,%2d]=%10.7f' %(iat,ic,self.iul_ucl [isp][iat][1,ic])
+                        print >> fout, 'iudlucl1[%2d,%2d]=%10.7f' %(iat,ic,self.iudl_ucl[isp][iat][1,ic])
+                        print >> fout, 'iuclul1 [%2d,%2d]=%10.7f' %(iat,ic,self.iucl_ul [isp][iat][1,ic])
+                        print >> fout, 'iucludl1[%2d,%2d]=%10.7f' %(iat,ic,self.iucl_udl[isp][iat][1,ic])
                         #
                         for ilo in in1.nLO_at_ind[iat][lc+1]:
-                            print >> fout, 'iulol1ucl(%2d,%2d,%2d)=%10.7f' % (iat,ic,ilo,self.iulol_ucl[isp][iat][0,ilo,ic])
-                        for ilo in in1.nLO_at_ind[iat][lc-1]:
-                            print >> fout,  'iulolucl1(%2d,%2d,%2d)=%10.7f' % (iat,ic,ilo,self.iulol_ucl[isp][iat][1,ilo,ic])
-                        for ilo in in1.nLO_at_ind[iat][lc-1]:
-                            print >> fout, 'iucl1ulol(%2d,%2d,%2d)=%10.7f' % (iat,ic,ilo,self.iucl_ulol[isp][iat][0,ilo,ic])
+                            print >> fout, 'iulol1ucl[%2d,%2d,%2d]=%10.7f' % (iat,ic,ilo,self.iulol_ucl[isp][iat][0,ilo,ic])
+                        if lc>0:
+                            for ilo in in1.nLO_at_ind[iat][lc-1]:
+                                print >> fout,  'iulolucl1[%2d,%2d,%2d]=%10.7f' % (iat,ic,ilo,self.iulol_ucl[isp][iat][1,ilo,ic])
+                            for ilo in in1.nLO_at_ind[iat][lc-1]:
+                                print >> fout, 'iucl1ulol[%2d,%2d,%2d]=%10.7f' % (iat,ic,ilo,self.iucl_ulol[isp][iat][0,ilo,ic])
                         for ilo in in1.nLO_at_ind[iat][lc+1]:
-                            print >> fout, 'iuclulol1(%2d,%2d,%2d)=%10.7f' % (iat,ic,ilo,self.iucl_ulol[isp][iat][1,ilo,ic])
+                            print >> fout, 'iuclulol1[%2d,%2d,%2d]=%10.7f' % (iat,ic,ilo,self.iucl_ulol[isp][iat][1,ilo,ic])
                         for jc,cl in enumerate(core.l_core[iat]):
                             if ilocals.has_key(('iucl_ucl',0,isp,iat,ic,jc)):
-                                print >> fout, 'iucl1ucl(%2d,%2d,%2d)=%10.7f' % (iat,ic,jc, ilocals[('iucl_ucl',0,isp,iat,ic,jc)])
+                                print >> fout, 'iucl1ucl[%2d,%2d,%2d]=%10.7f' % (iat,ic,jc, ilocals[('iucl_ucl',0,isp,iat,ic,jc)])
                             if ilocals.has_key(('iucl_ucl',1,isp,iat,ic,jc)):
-                                print >> fout, 'iuclucl1(%2d,%2d,%2d)=%10.7f' % (iat,ic,jc, ilocals[('iucl_ucl',1,isp,iat,ic,jc)])
+                                print >> fout, 'iuclucl1[%2d,%2d,%2d]=%10.7f' % (iat,ic,jc, ilocals[('iucl_ucl',1,isp,iat,ic,jc)])
                 
                 #iucl1ucl == iucl_ucl[0]
                 #iuclucl1 == iucl_ucl[1]
@@ -1221,6 +1246,7 @@ class KohnShamSystem:
                 #iucludl1 [isp][iat] = _iucl_udl_[1,:]
                 #iuclulol1[isp][iat] = _iucl_ulol_[1,:]
                 #call momradintv(iat,isp)
+        
     def valence_valence_integrals(self, case, in1, strc, core, radf, nspin, fout):
         # momradintv
         self.iul_ul   = zeros((2,in1.nt-1,strc.nat,nspin),order='F')
@@ -1287,12 +1313,17 @@ class KohnShamSystem:
                         print >> fout, 'iudl1ul (%2d,%2d)=%10.7f' % (iat,l,self.iudl_ul [0,l,iat,isp]), ' iudlul1 (%2d,%2d)=%10.7f' % (iat,l,self.iudl_ul[1,l,iat,isp])
                         print >> fout, 'iudl1udl(%2d,%2d)=%10.7f' % (iat,l,self.iudl_udl[0,l,iat,isp]), ' iudludl1(%2d,%2d)=%10.7f' % (iat,l,self.iudl_udl[1,l,iat,isp])
             # printing local orbitals
+            to_print=[]
             for iky in self.ilocals.keys():
                 if iky[1]==0:
                     name = re.sub('_','1',iky[0])
                 else:
                     name = re.sub('_','',iky[0])+'1'
-                print >> fout, '%-9s%s=%10.7f' % (name,str(tuple(iky[2:])),self.ilocals[iky])
+                #print >> fout, '%-9s%s=%10.7f' % (name,str(tuple(iky[3:])),self.ilocals[iky])
+                to_print.append( (name,tuple(iky[3:]),self.ilocals[iky]) )
+            for itm in sorted(to_print,key=lambda c: c[1]):
+                print >> fout, '%-9s%s=%10.7f' % (itm[0],str(itm[1]),itm[2])
+            
         # DICTIONARY
         #iul1ul    ,iulul1    = iul_ul[0,1]
         #iul1udl   ,iuludl1   = iul_udl[0,1]
@@ -2052,7 +2083,6 @@ class MatrixElements2Band:
                     au, bu = pb.ul_product[iat][irm], pb.us_product[iat][irm]
                     # now iterating only over G's of different length                            
                     sing[(iat,irm)] = [ rd.rint13g(strc.rel, au, bu, sinf[ig], sinf[ig], dh, npt, strc.r0[iat]) for ig in range(ngs) ]
-            
                     irms[iat].append(irm) # which product basis have L==0
 
         const = 16*pi**2/latgen.Vol
@@ -2368,6 +2398,16 @@ class MatrixElements2Band:
             t_mixed += tm22-tm21
             t_MT += tm23-tm22
 
+        if False:
+            print 'vmat'
+            for im in range(loctmatsize):
+                for jm in range(loctmatsize):
+                    if abs(Vmat[im,jm]) > 1e-7 :
+                        if abs(Vmat[im,jm].imag) > 1e-7 : 
+                            print '%4d %4d %17.12f %17.12f' % (im+1, jm+1, Vmat[im,jm].real, Vmat[im,jm].imag)
+                        else:
+                            print '%4d %4d %17.12f' % (im+1, jm+1, Vmat[im,jm].real)
+        
         #tm24 = timer()
         # This transforms into the plane-wave-product basis
         mat2 = dot(self.mpwipw, Vmatit.T)      # mat2[ pw.ngq[iq], loctmatsize]
@@ -3582,10 +3622,8 @@ class G0W0:
         ks.Vxc(case, in1, strc, radf, fout)
 
         #print >> fout, 'mem-usage[ks.VectorFileRead,ks.Vxc]=', ps.memory_info().rss*b2MB,'MB'
-        
-        
         #print >> fout, 'mem-usage[FrequencyMesh]=', ps.memory_info().rss*b2MB,'MB'
-        
+
         kw = Kweights(io, ks, kqm, fout)
         
         #print >> fout, 'mem-usage[Kweights]=', ps.memory_info().rss*b2MB,'MB'

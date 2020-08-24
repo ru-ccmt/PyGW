@@ -233,7 +233,7 @@ subroutine Generate_PW(glen, G_c, gindex, ng, ngindx, gmax, pia, br2, ortho, is_
   integer, intent(in)  :: ngindx
   integer, intent(in)  :: ng(3)
   real*8,  intent(in)  :: br2(3,3)
-  real*8,  intent(in)  :: gmax, pia
+  real*8,  intent(in)  :: gmax, pia(3)
   logical, intent(in)  :: ortho, is_CXZ, Q_sort
   !
   real*8  :: ki(3), kc(3), kk
@@ -255,9 +255,9 @@ subroutine Generate_PW(glen, G_c, gindex, ng, ngindx, gmax, pia, br2, ortho, is_
               glen(ig) = kk
               G_c(ig,:) = kc(:)
               if (ortho) then
-                 gindex(ig,1) = nint( kc(1)/pia +0.1 )
-                 gindex(ig,2) = nint( kc(2)/pia +0.1 )
-                 gindex(ig,3) = nint( kc(3)/pia +0.1 )
+                 gindex(ig,1) = nint( kc(1)/pia(1) +0.1 )
+                 gindex(ig,2) = nint( kc(2)/pia(2) +0.1 )
+                 gindex(ig,3) = nint( kc(3)/pia(3) +0.1 )
               else
                  if (is_CXZ) then
                     gindex(ig,:) = (/i1+i3,i2,i3-i1/)

@@ -84,7 +84,7 @@ class Struct:
             for i in range(3):
                 line = f.next()
                 rt.append( [float(line[col:col+10]) for col in 20+10*arange(3)] )
-            self.rotloc.append(rt)
+            self.rotloc.append(array(rt).T)
 
         self.aZnuc=[]
         for iat in range(self.nat):
